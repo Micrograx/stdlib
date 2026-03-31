@@ -7,6 +7,10 @@
 - [`aiken/collection/dict.{difference_with}`](https://aiken-lang.github.io/stdlib/aiken/collection/dict.html#difference_with): to efficiently compute the difference of two dicts.
 - [`cardano/assets.{difference}`](https://aiken-lang.github.io/stdlib/cardano/assets.html#difference): to efficiently compute the difference of two Value.
 
+### Changed
+
+- Various optimisations in `dict` and `assets` methods.
+
 ## v3.0.0 - 2025-10-21
 
 ### Added

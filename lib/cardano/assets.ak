@@ -51,11 +51,7 @@ pub fn from_asset(
   if quantity == 0 {
     zero
   } else {
-    let asset =
-      dict.empty
-        |> dict.insert(asset_name, quantity)
-    dict.empty
-      |> dict.insert(policy_id, asset)
+    dict.singleton(policy_id, dict.singleton(asset_name, quantity))
       |> Value
   }
 }
@@ -110,48 +106,44 @@ test from_asset_list_5() {
 }
 
 test from_asset_list_6() fail {
-  let v =
-    from_asset_list(
-      [
-        Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
-        Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
-      ],
-    )
+  let v = from_asset_list(
+    [
+      Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
+      Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
+    ],
+  )
   v != zero
 }
 
 test from_asset_list_7() fail {
-  let v =
-    from_asset_list(
-      [
-        Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
-        Pair(#"34", [Pair(#"", 1), Pair(#"", 1)]),
-      ],
-    )
+  let v = from_asset_list(
+    [
+      Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
+      Pair(#"34", [Pair(#"", 1), Pair(#"", 1)]),
+    ],
+  )
   v != zero
 }
 
 test from_asset_list_8() {
-  let v =
-    from_asset_list(
-      [
-        Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
-        Pair(#"34", [Pair(#"31", 1)]), Pair(#"35", [Pair(#"", 1)]),
-      ],
-    )
+  let v = from_asset_list(
+    [
+      Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]), Pair(#"34", [Pair(#"31", 1)]),
+      Pair(#"35", [Pair(#"", 1)]),
+    ],
+  )
   flatten(v) == [
     (#"33", #"", 1), (#"33", #"33", 1), (#"34", #"31", 1), (#"35", #"", 1),
   ]
 }
 
 test from_asset_list_9() {
-  let v =
-    from_asset_list(
-      [
-        Pair(#"35", [Pair(#"", 1)]), Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
-        Pair(#"34", [Pair(#"31", 1)]),
-      ],
-    )
+  let v = from_asset_list(
+    [
+      Pair(#"35", [Pair(#"", 1)]), Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
+      Pair(#"34", [Pair(#"31", 1)]),
+    ],
+  )
   flatten(v) == [
     (#"33", #"", 1), (#"33", #"33", 1), (#"34", #"31", 1), (#"35", #"", 1),
   ]
@@ -216,16 +208,15 @@ pub fn has_any_nft(self: Value, policy: PolicyId) -> Bool {
 /// assets.has_any_nft_strict(value, "bar") == False
 /// ```
 pub fn has_any_nft_strict(self: Value, policy: PolicyId) -> Bool {
-  let check_inner =
-    fn(p, inner) {
-      and {
-        p == policy,
-        when inner |> dict.to_pairs is {
-          [Pair(_, 1)] -> True
-          _ -> False
-        },
-      }
+  let check_inner = fn(p, inner) {
+    and {
+      p == policy,
+      when inner |> dict.to_pairs is {
+        [Pair(_, 1)] -> True
+        _ -> False
+      },
     }
+  }
 
   when self.inner |> dict.to_pairs is {
     [Pair(p1, _), Pair(p2, inner)] -> and {
@@ -515,11 +506,10 @@ pub fn match(
     {
       let (left_lovelace, left_assets) = dict.pop(left.inner, ada_policy_id)
       let left_assets: Data = left_assets
-      let left_lovelace =
-        when left_lovelace is {
-          Some(tokens) -> builtin.head_list(dict.to_pairs(tokens)).2nd
-          None -> 0
-        }
+      let left_lovelace = when left_lovelace is {
+        Some(tokens) -> builtin.head_list(dict.to_pairs(tokens)).2nd
+        None -> 0
+      }
       when builtin.un_map_data(right) is {
         [] -> left_assets == right && assert_lovelace(left_lovelace, 0)
         [first_asset, ..right_assets] ->
@@ -847,28 +837,26 @@ pub fn add(
   if quantity == 0 {
     self
   } else {
-    let helper =
-      fn(_, left, _right, keep, discard) {
-        let inner_result =
-          dict.insert_with(
-            left,
-            asset_name,
-            quantity,
-            dict_strategy.sum_if_non_zero(),
-          )
+    let helper = fn(_, left, _right, keep, discard) {
+      let inner_result = dict.insert_with(
+        left,
+        asset_name,
+        quantity,
+        dict_strategy.sum_if_non_zero(),
+      )
 
-        if dict.is_empty(inner_result) {
-          discard()
-        } else {
-          keep(inner_result)
-        }
+      if inner_result == dict.empty {
+        discard()
+      } else {
+        keep(inner_result)
       }
+    }
 
     Value(
       dict.insert_with(
         self.inner,
         policy_id,
-        dict.from_ascending_pairs([Pair(asset_name, quantity)]),
+        dict.singleton(asset_name, quantity),
         helper,
       ),
     )
@@ -876,41 +864,36 @@ pub fn add(
 }
 
 test add_1() {
-  let v =
-    zero
-      |> add(#"acab", #"beef", 321)
-      |> add(#"acab", #"beef", -321)
+  let v = zero
+    |> add(#"acab", #"beef", 321)
+    |> add(#"acab", #"beef", -321)
   v == zero
 }
 
 test add_2() {
-  let v =
-    from_lovelace(123)
-      |> add(#"acab", #"beef", 321)
-      |> add(#"acab", #"beef", -1 * 321)
+  let v = from_lovelace(123)
+    |> add(#"acab", #"beef", 321)
+    |> add(#"acab", #"beef", -1 * 321)
   v == from_lovelace(123)
 }
 
 test add_3() {
-  let v =
-    from_lovelace(1)
-      |> add(ada_policy_id, ada_asset_name, 2)
-      |> add(ada_policy_id, ada_asset_name, 3)
+  let v = from_lovelace(1)
+    |> add(ada_policy_id, ada_asset_name, 2)
+    |> add(ada_policy_id, ada_asset_name, 3)
   v == from_lovelace(6)
 }
 
 test add_4() {
-  let v =
-    zero
-      |> add(#"acab", #"beef", 0)
+  let v = zero
+    |> add(#"acab", #"beef", 0)
   v == zero
 }
 
 test add_5() {
-  let v =
-    zero
-      |> add(#"acab", #"beef", 0)
-      |> add(#"acab", #"beef", 0)
+  let v = zero
+    |> add(#"acab", #"beef", 0)
+    |> add(#"acab", #"beef", 0)
   v == zero
 }
 
@@ -920,14 +903,13 @@ pub fn difference(left v0: Value, right v1: Value) -> Value {
       v0.inner,
       v1.inner,
       fn(_, a0, a1, keep, discard) {
-        let result =
-          dict.difference_with(
-            a0,
-            a1,
-            dict_strategy.difference_if_non_zero(),
-            dict_strategy.negate(),
-          )
-        if dict.is_empty(result) {
+        let result = dict.difference_with(
+          a0,
+          a1,
+          dict_strategy.difference_if_non_zero(),
+          dict_strategy.negate(),
+        )
+        if result == dict.empty {
           discard()
         } else {
           keep(result)
@@ -953,10 +935,9 @@ test difference_1() {
 }
 
 test difference_2() {
-  let v =
-    zero
-      |> add(#"acab", #"beef", 321)
-      |> add(#"f00d", #"cafe", 42)
+  let v = zero
+    |> add(#"acab", #"beef", 321)
+    |> add(#"f00d", #"cafe", 42)
 
   and {
     (difference(v, v) == zero)?,
@@ -977,15 +958,13 @@ test difference_3() {
 }
 
 test difference_4() {
-  let left =
-    zero
-      |> add(#"00", #"aa", 10)
-      |> add(#"00", #"bb", 4)
+  let left = zero
+    |> add(#"00", #"aa", 10)
+    |> add(#"00", #"bb", 4)
 
-  let right =
-    zero
-      |> add(#"00", #"aa", 10)
-      |> add(#"00", #"bb", 1)
+  let right = zero
+    |> add(#"00", #"aa", 10)
+    |> add(#"00", #"bb", 1)
 
   let diff = [(#"00", #"bb", 3)]
 
@@ -1003,7 +982,7 @@ pub fn merge(left v0: Value, right v1: Value) -> Value {
       v1.inner,
       fn(_, a0, a1, keep, discard) {
         let result = dict.union_with(a0, a1, dict_strategy.sum_if_non_zero())
-        if dict.is_empty(result) {
+        if result == dict.empty {
           discard()
         } else {
           keep(result)
@@ -1023,11 +1002,10 @@ test merge_2() {
   let v1 = from_asset(#"00", #"", 1)
   let v2 = from_asset(#"01", #"", 2)
   let v3 = from_asset(#"02", #"", 3)
-  let v =
-    from_lovelace(42)
-      |> merge(v3)
-      |> merge(v1)
-      |> merge(v2)
+  let v = from_lovelace(42)
+    |> merge(v3)
+    |> merge(v1)
+    |> merge(v2)
 
   flatten(v) == [
     (#"", #"", 42), (#"00", #"", 1), (#"01", #"", 2), (#"02", #"", 3),
@@ -1039,11 +1017,10 @@ test merge_3() {
   let v2 = from_asset(#"00", #"", -1)
   let v3 = from_asset(#"01", #"", 1)
 
-  let v =
-    zero
-      |> merge(v1)
-      |> merge(v2)
-      |> merge(v3)
+  let v = zero
+    |> merge(v1)
+    |> merge(v2)
+    |> merge(v3)
 
   flatten(v) == [(#"01", #"", 1)]
 }
@@ -1056,9 +1033,8 @@ test merge_4() {
 }
 
 test merge_5() {
-  let v =
-    zero
-      |> add(#"acab", #"beef", 0)
+  let v = zero
+    |> add(#"acab", #"beef", 0)
 
   merge(zero, v) == zero
 }
@@ -1073,7 +1049,7 @@ test merge_5() {
 /// // True
 /// ```
 pub fn negate(self: Value) -> Value {
-  dict.map(self.inner, fn(_, a) { dict.map(a, fn(_, q) { 0 - q }) })
+  dict.map(self.inner, fn(_, a) { dict.map(a, fn(_, qty) { -qty }) })
     |> Value
 }
 
@@ -1141,9 +1117,8 @@ test without_lovelace_2() {
 }
 
 test without_lovelace_3() {
-  let v =
-    from_asset(#"010203", #"040506", 100)
-      |> add(ada_policy_id, ada_asset_name, 100000000)
+  let v = from_asset(#"010203", #"040506", 100)
+    |> add(ada_policy_id, ada_asset_name, 100000000)
   let v2 = from_asset(#"010203", #"040506", 100)
   without_lovelace(v) == without_lovelace(v2) && without_lovelace(v) == v2
 }
@@ -1201,11 +1176,10 @@ test flatten_with_1() {
 }
 
 test flatten_with_2() {
-  let v =
-    zero
-      |> add("a", "1", 14)
-      |> add("b", "", 42)
-      |> add("a", "2", 42)
+  let v = zero
+    |> add("a", "1", 14)
+    |> add("b", "", 42)
+    |> add("a", "2", 42)
 
   flatten_with(
     v,
@@ -1243,26 +1217,23 @@ pub fn reduce(
 }
 
 test reduce_1() {
-  let v =
-    zero
-      |> add("a", "1", 10)
-      |> add("b", "2", 20)
+  let v = zero
+    |> add("a", "1", 10)
+    |> add("b", "2", 20)
   let result = reduce(v, 0, fn(_, _, quantity, acc) { acc + quantity })
   result == 30
 }
 
 test reduce_2() {
-  let v =
-    zero
-      |> add("a", "1", 5)
-      |> add("a", "2", 15)
-      |> add("b", "", 10)
-  let result =
-    reduce(
-      v,
-      [],
-      fn(policy_id, asset_name, _, acc) { [(policy_id, asset_name), ..acc] },
-    )
+  let v = zero
+    |> add("a", "1", 5)
+    |> add("a", "2", 15)
+    |> add("b", "", 10)
+  let result = reduce(
+    v,
+    [],
+    fn(policy_id, asset_name, _, acc) { [(policy_id, asset_name), ..acc] },
+  )
   result == [("a", "1"), ("a", "2"), ("b", "")]
 }
 

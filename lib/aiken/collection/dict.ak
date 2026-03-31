@@ -129,15 +129,14 @@ fn check_ascending_pairs_with(
 }
 
 test bench_from_ascending_pairs() {
-  let dict =
-    from_ascending_pairs(
-      [
-        Pair("aaaa", 1), Pair("aaab", 9), Pair("aaba", 5), Pair("aabb", 13),
-        Pair("abaa", 2), Pair("abab", 10), Pair("abba", 6), Pair("abbb", 14),
-        Pair("baaa", 3), Pair("baab", 11), Pair("baba", 7), Pair("babb", 15),
-        Pair("bbaa", 4), Pair("bbab", 12), Pair("bbba", 8), Pair("bbbb", 16),
-      ],
-    )
+  let dict = from_ascending_pairs(
+    [
+      Pair("aaaa", 1), Pair("aaab", 9), Pair("aaba", 5), Pair("aabb", 13),
+      Pair("abaa", 2), Pair("abab", 10), Pair("abba", 6), Pair("abbb", 14),
+      Pair("baaa", 3), Pair("baab", 11), Pair("baba", 7), Pair("babb", 15),
+      Pair("bbaa", 4), Pair("bbab", 12), Pair("bbba", 8), Pair("bbbb", 16),
+    ],
+  )
 
   size(dict) == 16
 }
@@ -162,7 +161,7 @@ fn do_from_pairs(xs: Pairs<ByteArray, value>) -> Pairs<ByteArray, value> {
   when xs is {
     [] -> []
     [Pair(k, v), ..rest] ->
-      do_insert_with(do_from_pairs(rest), k, v, strategy.keep_left())
+      do_insert_with(do_from_pairs(rest), k, v, strategy.keep_right())
   }
 }
 
@@ -185,17 +184,21 @@ test from_list_4() {
 }
 
 test bench_from_pairs() {
-  let dict =
-    from_pairs(
-      [
-        Pair("bbba", 8), Pair("bbab", 12), Pair("aabb", 13), Pair("aaab", 9),
-        Pair("bbbb", 16), Pair("aaaa", 1), Pair("aaba", 5), Pair("abab", 10),
-        Pair("baba", 7), Pair("baab", 11), Pair("abaa", 2), Pair("baaa", 3),
-        Pair("bbaa", 4), Pair("babb", 15), Pair("abbb", 14), Pair("abba", 6),
-      ],
-    )
+  let dict = from_pairs(
+    [
+      Pair("bbba", 8), Pair("bbab", 12), Pair("aabb", 13), Pair("aaab", 9),
+      Pair("bbbb", 16), Pair("aaaa", 1), Pair("aaba", 5), Pair("abab", 10),
+      Pair("baba", 7), Pair("baab", 11), Pair("abaa", 2), Pair("baaa", 3),
+      Pair("bbaa", 4), Pair("babb", 15), Pair("abbb", 14), Pair("abba", 6),
+    ],
+  )
 
   size(dict) == 16
+}
+
+/// Construct a dictionary from a single key/value pair
+pub fn singleton(key k: ByteArray, value v: value) -> Dict<key, value> {
+  Dict([Pair(k, v)])
 }
 
 // ## Inspecting
@@ -219,9 +222,9 @@ pub fn find(self: Dict<key, value>, value v: value) -> Option<ByteArray> {
 fn do_find(self: Pairs<ByteArray, value>, value v: value) -> Option<ByteArray> {
   when self is {
     [] -> None
-    [Pair(k2, v2), ..rest] ->
-      if v == v2 {
-        Some(k2)
+    [head, ..rest] ->
+      if v == head.2nd {
+        Some(head.1st)
       } else {
         do_find(rest, v)
       }
@@ -300,10 +303,10 @@ fn do_get(
 ) -> result {
   when self is {
     [] -> or_else()
-    [Pair(k2, v), ..rest] ->
+    [Pair(k2, _) as head, ..rest] ->
       if builtin.less_than_equals_bytearray(k, k2) {
         if k == k2 {
-          return(v)
+          return(head.2nd)
         } else {
           or_else()
         }
@@ -322,101 +325,93 @@ test get_or_else_1() {
 }
 
 test get_2() {
-  let m =
-    empty
-      |> insert(foo, "Aiken")
-      |> insert(bar, "awesome")
+  let m = empty
+    |> insert(foo, "Aiken")
+    |> insert(bar, "awesome")
   get(m, key: foo) == Some("Aiken")
 }
 
 test get_or_else_2() {
-  let m =
-    empty
-      |> insert(foo, "Aiken")
-      |> insert(bar, "awesome")
+  let m = empty
+    |> insert(foo, "Aiken")
+    |> insert(bar, "awesome")
   get_or_else(m, key: foo, or_else: fn() { "" }) == "Aiken"
 }
 
 test get_3() {
-  let m =
-    empty
-      |> insert(foo, "Aiken")
-      |> insert(bar, "awesome")
+  let m = empty
+    |> insert(foo, "Aiken")
+    |> insert(bar, "awesome")
   get(m, key: baz) == None
 }
 
 test get_or_else_3() {
-  let m =
-    empty
-      |> insert(foo, "Aiken")
-      |> insert(bar, "awesome")
+  let m = empty
+    |> insert(foo, "Aiken")
+    |> insert(bar, "awesome")
   get_or_else(m, key: baz, or_else: fn() { "missing?" }) == "missing?"
 }
 
 test get_4() {
-  let m =
-    empty
-      |> insert("aaa", "1")
-      |> insert("bbb", "2")
-      |> insert("ccc", "3")
-      |> insert("ddd", "4")
-      |> insert("eee", "5")
-      |> insert("fff", "6")
-      |> insert("ggg", "7")
-      |> insert("hhh", "8")
-      |> insert("iii", "9")
-      |> insert("jjj", "10")
+  let m = empty
+    |> insert("aaa", "1")
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
 
   get(m, "bcd") == None
 }
 
 test get_or_else_4() {
-  let m =
-    empty
-      |> insert("aaa", "1")
-      |> insert("bbb", "2")
-      |> insert("ccc", "3")
-      |> insert("ddd", "4")
-      |> insert("eee", "5")
-      |> insert("fff", "6")
-      |> insert("ggg", "7")
-      |> insert("hhh", "8")
-      |> insert("iii", "9")
-      |> insert("jjj", "10")
+  let m = empty
+    |> insert("aaa", "1")
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
 
   get_or_else(m, "bcd", fn() { "0" }) == "0"
 }
 
 test get_5() {
-  let m =
-    empty
-      |> insert("aaa", "1")
-      |> insert("bbb", "2")
-      |> insert("ccc", "3")
-      |> insert("ddd", "4")
-      |> insert("eee", "5")
-      |> insert("fff", "6")
-      |> insert("ggg", "7")
-      |> insert("hhh", "8")
-      |> insert("iii", "9")
-      |> insert("jjj", "10")
+  let m = empty
+    |> insert("aaa", "1")
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
 
   get(m, "kkk") == None
 }
 
 test get_or_else_5() {
-  let m =
-    empty
-      |> insert("aaa", "1")
-      |> insert("bbb", "2")
-      |> insert("ccc", "3")
-      |> insert("ddd", "4")
-      |> insert("eee", "5")
-      |> insert("fff", "6")
-      |> insert("ggg", "7")
-      |> insert("hhh", "8")
-      |> insert("iii", "9")
-      |> insert("jjj", "10")
+  let m = empty
+    |> insert("aaa", "1")
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
 
   get_or_else(m, "kkk", fn() { "" }) == ""
 }
@@ -627,7 +622,7 @@ fn do_delete(
 ) -> Pairs<ByteArray, value> {
   when self is {
     [] -> []
-    [Pair(k2, v2), ..rest] ->
+    [Pair(k2, _) as head, ..rest] ->
       if builtin.less_than_equals_bytearray(k, k2) {
         if k == k2 {
           rest
@@ -635,7 +630,7 @@ fn do_delete(
           self
         }
       } else {
-        [Pair(k2, v2), ..do_delete(rest, k)]
+        [head, ..do_delete(rest, k)]
       }
   }
 }
@@ -645,48 +640,43 @@ test delete_1() {
 }
 
 test delete_2() {
-  let m =
-    empty
-      |> insert(foo, 14)
+  let m = empty
+    |> insert(foo, 14)
   delete(m, foo) == empty
 }
 
 test delete_3() {
-  let m =
-    empty
-      |> insert(foo, 14)
+  let m = empty
+    |> insert(foo, 14)
   delete(m, bar) == m
 }
 
 test delete_4() {
-  let m =
-    empty
-      |> insert(foo, 14)
-      |> insert(bar, 14)
+  let m = empty
+    |> insert(foo, 14)
+    |> insert(bar, 14)
   !has_key(delete(m, foo), foo)
 }
 
 test delete_5() {
-  let m =
-    empty
-      |> insert(foo, 14)
-      |> insert(bar, 14)
+  let m = empty
+    |> insert(foo, 14)
+    |> insert(bar, 14)
   has_key(delete(m, bar), foo)
 }
 
 test delete_6() {
-  let m =
-    empty
-      |> insert("aaa", 1)
-      |> insert("bbb", 2)
-      |> insert("ccc", 3)
-      |> insert("ddd", 4)
-      |> insert("eee", 5)
-      |> insert("fff", 6)
-      |> insert("ggg", 7)
-      |> insert("hhh", 8)
-      |> insert("iii", 9)
-      |> insert("jjj", 10)
+  let m = empty
+    |> insert("aaa", 1)
+    |> insert("bbb", 2)
+    |> insert("ccc", 3)
+    |> insert("ddd", 4)
+    |> insert("eee", 5)
+    |> insert("fff", 6)
+    |> insert("ggg", 7)
+    |> insert("hhh", 8)
+    |> insert("iii", 9)
+    |> insert("jjj", 10)
 
   delete(m, "bcd") == m
 }
@@ -733,31 +723,38 @@ fn do_difference_with(
       when right is {
         [] -> left
         [Pair(k2, v2), ..rest_right] ->
-          if builtin.less_than_bytearray(k, k2) {
-            [
-              Pair(k, v),
-              ..do_difference_with(rest_left, right, with_both, with_right)
-            ]
-          } else if k == k2 {
-            with_both(
-              k,
-              v,
-              v2,
-              fn(combined) {
-                [
-                  Pair(k, combined),
-                  ..do_difference_with(
+          if builtin.less_than_equals_bytearray(k, k2) {
+            if k == k2 {
+              with_both(
+                k,
+                v,
+                v2,
+                fn(combined) {
+                  [
+                    Pair(k, combined),
+                    ..do_difference_with(
+                      rest_left,
+                      rest_right,
+                      with_both,
+                      with_right,
+                    )
+                  ]
+                },
+                fn() {
+                  do_difference_with(
                     rest_left,
                     rest_right,
                     with_both,
                     with_right,
                   )
-                ]
-              },
-              fn() {
-                do_difference_with(rest_left, rest_right, with_both, with_right)
-              },
-            )
+                },
+              )
+            } else {
+              [
+                Pair(k, v),
+                ..do_difference_with(rest_left, right, with_both, with_right)
+              ]
+            }
           } else {
             with_right(
               k2,
@@ -800,33 +797,29 @@ test difference_with_1() {
 }
 
 test difference_with_2() {
-  let left =
-    empty
-      |> insert(foo, 14)
-      |> insert(bar, 42)
+  let left = empty
+    |> insert(foo, 14)
+    |> insert(bar, 42)
 
   difference_with(left, empty, strategy.sum(), strategy.keep()) == left
 }
 
 test difference_with_3() {
-  let right =
-    empty
-      |> insert(foo, 14)
-      |> insert(bar, 42)
+  let right = empty
+    |> insert(foo, 14)
+    |> insert(bar, 42)
 
   difference_with(empty, right, strategy.sum(), strategy.keep()) == right
 }
 
 test difference_with_4() {
-  let left =
-    empty
-      |> insert("a", 100)
-      |> insert("b", 200)
+  let left = empty
+    |> insert("a", 100)
+    |> insert("b", 200)
 
-  let right =
-    empty
-      |> insert("a", 150)
-      |> insert("c", 300)
+  let right = empty
+    |> insert("a", 150)
+    |> insert("c", 300)
 
   let result = difference_with(left, right, strategy.sum(), strategy.keep())
 
@@ -834,41 +827,40 @@ test difference_with_4() {
 }
 
 test difference_with_5() {
-  let left =
-    empty
-      |> insert("a", 100)
-      |> insert("b", 200)
-      |> insert("c", 300)
+  let left = empty
+    |> insert("a", 100)
+    |> insert("b", 200)
+    |> insert("c", 300)
 
-  let right =
-    empty
-      |> insert("a", 100)
-      |> insert("c", 300)
+  let right = empty
+    |> insert("a", 100)
+    |> insert("c", 300)
 
-  let result =
-    difference_with(
-      left,
-      right,
-      strategy.difference_if_non_zero(),
-      strategy.discard(),
-    )
+  let result = difference_with(
+    left,
+    right,
+    strategy.difference_if_non_zero(),
+    strategy.discard(),
+  )
 
   result == from_pairs([Pair("b", 200)])
 }
 
 test difference_with_6() {
-  let left =
-    empty
-      |> insert("a", 100)
-      |> insert("b", 200)
+  let left = empty
+    |> insert("a", 100)
+    |> insert("b", 200)
 
-  let right =
-    empty
-      |> insert("a", 150)
-      |> insert("c", 300)
+  let right = empty
+    |> insert("a", 150)
+    |> insert("c", 300)
 
-  let result =
-    difference_with(left, right, strategy.difference(), strategy.negate())
+  let result = difference_with(
+    left,
+    right,
+    strategy.difference(),
+    strategy.negate(),
+  )
 
   result == from_pairs([Pair("a", -50), Pair("b", 200), Pair("c", -300)])
 }
@@ -899,9 +891,9 @@ fn do_filter(
 ) -> Pairs<ByteArray, value> {
   when self is {
     [] -> []
-    [Pair(k, v), ..rest] ->
+    [Pair(k, v) as head, ..rest] ->
       if with(k, v) {
-        [Pair(k, v), ..do_filter(rest, with)]
+        [head, ..do_filter(rest, with)]
       } else {
         do_filter(rest, with)
       }
@@ -913,16 +905,14 @@ test filter_1() {
 }
 
 test filter_2() {
-  let expected =
-    empty
-      |> insert(foo, 42)
+  let expected = empty
+    |> insert(foo, 42)
   filter(fixture_1, fn(_, v) { v > 14 }) == expected
 }
 
 test filter_3() {
-  let expected =
-    empty
-      |> insert(bar, 14)
+  let expected = empty
+    |> insert(bar, 14)
   filter(fixture_1, fn(k, _) { k == bar }) == expected
 }
 
@@ -953,36 +943,32 @@ fn do_insert(
 ) -> Pairs<ByteArray, value> {
   when self is {
     [] -> [Pair(k, v)]
-    [Pair(k2, v2), ..rest] ->
-      if builtin.less_than_bytearray(k, k2) {
-        [Pair(k, v), ..self]
-      } else {
+    [Pair(k2, _) as head, ..rest] ->
+      if builtin.less_than_equals_bytearray(k, k2) {
         if k == k2 {
           [Pair(k, v), ..rest]
         } else {
-          [Pair(k2, v2), ..do_insert(rest, k, v)]
+          [Pair(k, v), ..self]
         }
+      } else {
+        [head, ..do_insert(rest, k, v)]
       }
   }
 }
 
 test insert_1() {
-  let m1 =
-    empty
-      |> insert(foo, 42)
-  let m2 =
-    empty
-      |> insert(foo, 14)
+  let m1 = empty
+    |> insert(foo, 42)
+  let m2 = empty
+    |> insert(foo, 14)
   insert(m1, foo, 14) == m2
 }
 
 test insert_2() {
-  let m1 =
-    empty
-      |> insert(foo, 42)
-  let m2 =
-    empty
-      |> insert(bar, 14)
+  let m1 = empty
+    |> insert(foo, 42)
+  let m2 = empty
+    |> insert(bar, 14)
   insert(m1, bar, 14) == insert(m2, foo, 42)
 }
 
@@ -1008,54 +994,43 @@ pub fn insert_with(
   value v: value,
   with: UnionStrategy<ByteArray, value>,
 ) -> Dict<key, value> {
-  Dict {
-    inner: do_insert_with(
-      self.inner,
-      k,
-      v,
-      fn(k, v1, v2, some, none) { with(k, v2, v1, some, none) },
-    ),
-  }
+  Dict { inner: do_insert_with(self.inner, k, v, with) }
 }
 
 test insert_with_1() {
-  let result =
-    empty
-      |> insert_with(key: "foo", value: 1, with: strategy.sum())
-      |> insert_with(key: "bar", value: 2, with: strategy.sum())
-      |> to_pairs()
+  let result = empty
+    |> insert_with(key: "foo", value: 1, with: strategy.sum())
+    |> insert_with(key: "bar", value: 2, with: strategy.sum())
+    |> to_pairs()
 
   result == [Pair("bar", 2), Pair("foo", 1)]
 }
 
 test insert_with_2() {
-  let result =
-    empty
-      |> insert_with(key: "foo", value: 1, with: strategy.sum())
-      |> insert_with(key: "bar", value: 2, with: strategy.sum())
-      |> insert_with(key: "foo", value: 3, with: strategy.sum())
-      |> to_pairs()
+  let result = empty
+    |> insert_with(key: "foo", value: 1, with: strategy.sum())
+    |> insert_with(key: "bar", value: 2, with: strategy.sum())
+    |> insert_with(key: "foo", value: 3, with: strategy.sum())
+    |> to_pairs()
 
   result == [Pair("bar", 2), Pair("foo", 4)]
 }
 
 test insert_with_3() {
-  let with =
-    fn(k, a, _b, keep, discard) {
-      if k == "foo" {
-        keep(a)
-      } else {
-        discard()
-      }
+  let with = fn(k, a, _b, keep, discard) {
+    if k == "foo" {
+      keep(a)
+    } else {
+      discard()
     }
+  }
 
-  let result =
-    empty
-      |> insert_with(key: "foo", value: 1, with: with)
-      |> insert_with(key: "bar", value: 2, with: with)
-      |> insert_with(key: "foo", value: 3, with: with)
-      |> insert_with(key: "bar", value: 4, with: with)
-      |> to_pairs()
+  let result = empty
+    |> insert_with(key: "foo", value: 1, with: with)
+    |> insert_with(key: "bar", value: 2, with: with)
+    |> insert_with(key: "foo", value: 3, with: with)
+    |> insert_with(key: "bar", value: 4, with: with)
+    |> to_pairs()
 
   result == [Pair("foo", 1)]
 }
@@ -1088,16 +1063,14 @@ fn do_map(
 }
 
 test map_1() {
-  let result =
-    fixture_1
-      |> map(with: fn(k, _) { k })
+  let result = fixture_1
+    |> map(with: fn(k, _) { k })
   get(result, foo) == Some(foo)
 }
 
 test map_2() {
-  let result =
-    fixture_1
-      |> map(with: fn(_, v) { v + 1 })
+  let result = fixture_1
+    |> map(with: fn(_, v) { v + 1 })
   get(result, foo) == Some(43) && size(result) == size(fixture_1)
 }
 
@@ -1126,19 +1099,15 @@ fn do_pop(
 ) -> result {
   when self is {
     [] -> return(None, [])
-    [Pair(k2, v2), ..rest] ->
+    [Pair(k2, _) as head, ..rest] ->
       if builtin.less_than_equals_bytearray(k, k2) {
         if k == k2 {
-          return(Some(v2), rest)
+          return(Some(head.2nd), rest)
         } else {
           return(None, self)
         }
       } else {
-        do_pop(
-          rest,
-          k,
-          fn(value, inner) { return(value, [Pair(k2, v2), ..inner]) },
-        )
+        do_pop(rest, k, fn(value, inner) { return(value, [head, ..inner]) })
       }
   }
 }
@@ -1148,40 +1117,44 @@ test pop_1() {
 }
 
 test pop_2() {
-  let m =
-    empty
-      |> insert(foo, 14)
+  let m = empty
+    |> insert(foo, 14)
   pop(m, foo) == (Some(14), empty)
 }
 
 test pop_3() {
-  let m =
-    empty
-      |> insert(foo, 14)
+  let m = empty
+    |> insert(foo, 14)
   pop(m, bar) == (None, m)
 }
 
 test pop_4() {
-  let m =
-    empty
-      |> insert(foo, 14)
-      |> insert(bar, 14)
+  let m = empty
+    |> insert(foo, 14)
+    |> insert(bar, 14)
   pop(m, foo) == (Some(14), empty |> insert(bar, 14))
 }
 
+test pop_5() {
+  let m = empty
+    |> insert("a", 1)
+    |> insert("b", 2)
+    |> insert("c", 3)
+  pop(m, "a") == (Some(1), empty |> insert("b", 2) |> insert("c", 3))
+}
+
 test pop_6() {
-  let m =
-    empty
-      |> insert("aaa", 1)
-      |> insert("bbb", 2)
-      |> insert("ccc", 3)
-      |> insert("ddd", 4)
-      |> insert("eee", 5)
-      |> insert("fff", 6)
-      |> insert("ggg", 7)
-      |> insert("hhh", 8)
-      |> insert("iii", 9)
-      |> insert("jjj", 10)
+  let m = empty
+    |> insert("aaa", 1)
+    |> insert("bbb", 2)
+    |> insert("ccc", 3)
+    |> insert("ddd", 4)
+    |> insert("eee", 5)
+    |> insert("fff", 6)
+    |> insert("ggg", 7)
+    |> insert("hhh", 8)
+    |> insert("iii", 9)
+    |> insert("jjj", 10)
 
   pop(m, "bcd") == (None, m)
 }
@@ -1226,26 +1199,22 @@ test union_2() {
 }
 
 test union_3() {
-  let left =
-    empty
-      |> insert(foo, 14)
-  let right =
-    empty
-      |> insert(bar, 42)
-      |> insert(baz, 1337)
+  let left = empty
+    |> insert(foo, 14)
+  let right = empty
+    |> insert(bar, 42)
+    |> insert(baz, 1337)
   union(left, right) == from_pairs(
     [Pair(foo, 14), Pair(baz, 1337), Pair(bar, 42)],
   )
 }
 
 test union_4() {
-  let left =
-    empty
-      |> insert(foo, 14)
-  let right =
-    empty
-      |> insert(bar, 42)
-      |> insert(foo, 1337)
+  let left = empty
+    |> insert(foo, 14)
+  let right = empty
+    |> insert(bar, 42)
+    |> insert(foo, 1337)
   union(left, right) == from_pairs([Pair(foo, 14), Pair(bar, 42)])
 }
 
@@ -1297,34 +1266,32 @@ fn do_insert_with(
 ) -> Pairs<ByteArray, value> {
   when self is {
     [] -> [Pair(k, v)]
-    [Pair(k2, v2), ..rest] ->
-      if builtin.less_than_bytearray(k, k2) {
-        [Pair(k, v), ..self]
-      } else {
+    [Pair(k2, _) as head, ..rest] ->
+      if builtin.less_than_equals_bytearray(k, k2) {
         if k == k2 {
           with(
             k,
+            head.2nd,
             v,
-            v2,
             fn(combined) { [Pair(k, combined), ..rest] },
             fn() { rest },
           )
         } else {
-          [Pair(k2, v2), ..do_insert_with(rest, k, v, with)]
+          [Pair(k, v), ..self]
         }
+      } else {
+        [head, ..do_insert_with(rest, k, v, with)]
       }
   }
 }
 
 test union_with_1() {
-  let left =
-    empty
-      |> insert(foo, 14)
+  let left = empty
+    |> insert(foo, 14)
 
-  let right =
-    empty
-      |> insert(bar, 42)
-      |> insert(foo, 1337)
+  let right = empty
+    |> insert(bar, 42)
+    |> insert(foo, 1337)
 
   let result = union_with(left, right, with: strategy.sum())
 

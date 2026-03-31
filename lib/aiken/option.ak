@@ -65,23 +65,20 @@ fn try_decrement(n: Int) -> Option<Int> {
 }
 
 test and_then_1() {
-  let result =
-    None
-      |> and_then(try_decrement)
+  let result = None
+    |> and_then(try_decrement)
   result == None
 }
 
 test and_then_2() {
-  let result =
-    Some(14)
-      |> and_then(try_decrement)
+  let result = Some(14)
+    |> and_then(try_decrement)
   result == Some(13)
 }
 
 test and_then_3() {
-  let result =
-    Some(0)
-      |> and_then(try_decrement)
+  let result = Some(0)
+    |> and_then(try_decrement)
   result == None
 }
 
@@ -155,10 +152,9 @@ test flatten_3() {
 test flatten_4() {
   let x: Option<Option<Option<Int>>> = Some(Some(Some(6)))
 
-  let result =
-    x
-      |> flatten
-      |> flatten
+  let result = x
+    |> flatten
+    |> flatten
 
   Some(6) == result
 }

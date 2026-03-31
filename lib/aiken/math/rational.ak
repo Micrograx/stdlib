@@ -308,16 +308,15 @@ test mul_2() {
 }
 
 test mul_3() {
-  let result =
-    ratio(2, 5)
-      |> mul(ratio(1, 8))
-      |> mul(ratio(3, 10))
-      |> mul(ratio(21, 100))
-      |> mul(ratio(3, 5))
-      |> mul(ratio(2, 8))
-      |> mul(ratio(4, 10))
-      |> mul(ratio(22, 100))
-      |> reduce
+  let result = ratio(2, 5)
+    |> mul(ratio(1, 8))
+    |> mul(ratio(3, 10))
+    |> mul(ratio(21, 100))
+    |> mul(ratio(3, 5))
+    |> mul(ratio(2, 8))
+    |> mul(ratio(4, 10))
+    |> mul(ratio(22, 100))
+    |> reduce
 
   result == ratio(2079, 50000000)
 }
@@ -417,8 +416,7 @@ pub fn compare_with(
 // TODO: Rewrite tests using binary-operator as first-class functions once aiken-lang/aiken#619 is merged.
 
 test compare_with_eq() {
-  let eq =
-    compare_with(_, fn(l, r) { l == r }, _)
+  let eq = compare_with(_, fn(l, r) { l == r }, _)
 
   expect Some(x) = new(2, 3)
   expect Some(y) = new(3, 4)
@@ -427,8 +425,7 @@ test compare_with_eq() {
 }
 
 test compare_with_neq() {
-  let neq =
-    compare_with(_, fn(l, r) { l != r }, _)
+  let neq = compare_with(_, fn(l, r) { l != r }, _)
 
   expect Some(x) = new(2, 3)
   expect Some(y) = new(3, 4)
@@ -437,8 +434,7 @@ test compare_with_neq() {
 }
 
 test compare_with_gte() {
-  let gte =
-    compare_with(_, fn(l, r) { l >= r }, _)
+  let gte = compare_with(_, fn(l, r) { l >= r }, _)
 
   expect Some(x) = new(2, 3)
   expect Some(y) = new(3, 4)
@@ -447,8 +443,7 @@ test compare_with_gte() {
 }
 
 test compare_with_gt() {
-  let gt =
-    compare_with(_, fn(l, r) { l > r }, _)
+  let gt = compare_with(_, fn(l, r) { l > r }, _)
 
   expect Some(x) = new(2, 3)
   expect Some(y) = new(3, 4)
@@ -457,8 +452,7 @@ test compare_with_gt() {
 }
 
 test compare_with_lte() {
-  let lte =
-    compare_with(_, fn(l, r) { l <= r }, _)
+  let lte = compare_with(_, fn(l, r) { l <= r }, _)
 
   expect Some(x) = new(2, 3)
   expect Some(y) = new(3, 4)
@@ -467,8 +461,7 @@ test compare_with_lte() {
 }
 
 test compare_with_lt() {
-  let lt =
-    compare_with(_, fn(l, r) { l < r }, _)
+  let lt = compare_with(_, fn(l, r) { l < r }, _)
 
   expect Some(x) = new(2, 3)
   expect Some(y) = new(3, 4)
@@ -508,15 +501,14 @@ test arithmetic_mean_2() {
 }
 
 test arithmetic_mean_3() {
-  let xs =
-    [
-      ratio(1, 1),
-      ratio(2, 1),
-      ratio(3, 1),
-      ratio(4, 1),
-      ratio(5, 1),
-      ratio(6, 1),
-    ]
+  let xs = [
+    ratio(1, 1),
+    ratio(2, 1),
+    ratio(3, 1),
+    ratio(4, 1),
+    ratio(5, 1),
+    ratio(6, 1),
+  ]
   expect Some(z) = arithmetic_mean(xs)
   reduce(z) == ratio(7, 2)
 }
@@ -808,11 +800,10 @@ test round_1() {
 pub fn round_even(self: Rational) -> Int {
   let (n, f) = proper_fraction(self)
 
-  let m =
-    when compare(f, ratio(0, 1)) is {
-      Less -> -1
-      _ -> 1
-    }
+  let m = when compare(f, ratio(0, 1)) is {
+    Less -> -1
+    _ -> 1
+  }
 
   let is_even = n % 2 == 0
 

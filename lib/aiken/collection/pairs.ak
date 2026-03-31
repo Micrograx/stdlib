@@ -512,20 +512,18 @@ pub fn insert_by_ascending_key(
 }
 
 test insert_by_ascending_key_1() {
-  let m =
-    []
-      |> insert_by_ascending_key("foo", 42, bytearray.compare)
-      |> insert_by_ascending_key("foo", 14, bytearray.compare)
+  let m = []
+    |> insert_by_ascending_key("foo", 42, bytearray.compare)
+    |> insert_by_ascending_key("foo", 14, bytearray.compare)
 
   m == [Pair("foo", 14), Pair("foo", 42)]
 }
 
 test insert_by_ascending_key_2() {
-  let m =
-    []
-      |> insert_by_ascending_key("foo", 42, bytearray.compare)
-      |> insert_by_ascending_key("bar", 14, bytearray.compare)
-      |> insert_by_ascending_key("baz", 1337, bytearray.compare)
+  let m = []
+    |> insert_by_ascending_key("foo", 42, bytearray.compare)
+    |> insert_by_ascending_key("bar", 14, bytearray.compare)
+    |> insert_by_ascending_key("baz", 1337, bytearray.compare)
 
   m == [Pair("bar", 14), Pair("baz", 1337), Pair("foo", 42)]
 }
@@ -578,55 +576,51 @@ pub fn insert_with_by_ascending_key(
 }
 
 test insert_with_by_ascending_key_1() {
-  let compare_un_b_data =
-    fn(l, r) {
-      bytearray.compare(l |> builtin.un_b_data, r |> builtin.un_b_data)
-    }
+  let compare_un_b_data = fn(l, r) {
+    bytearray.compare(l |> builtin.un_b_data, r |> builtin.un_b_data)
+  }
 
-  let m =
-    []
-      |> insert_with_by_ascending_key(
-          "foo" |> builtin.b_data,
-          42,
-          compare_un_b_data,
-          builtin.add_integer,
-        )
-      |> insert_with_by_ascending_key(
-          "foo" |> builtin.b_data,
-          14,
-          compare_un_b_data,
-          builtin.add_integer,
-        )
+  let m = []
+    |> insert_with_by_ascending_key(
+        "foo" |> builtin.b_data,
+        42,
+        compare_un_b_data,
+        builtin.add_integer,
+      )
+    |> insert_with_by_ascending_key(
+        "foo" |> builtin.b_data,
+        14,
+        compare_un_b_data,
+        builtin.add_integer,
+      )
 
   m == [Pair("foo" |> builtin.b_data, 56)]
 }
 
 test insert_with_by_ascending_key_2() {
-  let compare_un_b_data =
-    fn(l, r) {
-      bytearray.compare(l |> builtin.un_b_data, r |> builtin.un_b_data)
-    }
+  let compare_un_b_data = fn(l, r) {
+    bytearray.compare(l |> builtin.un_b_data, r |> builtin.un_b_data)
+  }
 
-  let m =
-    []
-      |> insert_with_by_ascending_key(
-          "foo" |> builtin.b_data,
-          42,
-          compare_un_b_data,
-          builtin.add_integer,
-        )
-      |> insert_with_by_ascending_key(
-          "bar" |> builtin.b_data,
-          14,
-          compare_un_b_data,
-          builtin.add_integer,
-        )
-      |> insert_with_by_ascending_key(
-          "baz" |> builtin.b_data,
-          1337,
-          compare_un_b_data,
-          builtin.add_integer,
-        )
+  let m = []
+    |> insert_with_by_ascending_key(
+        "foo" |> builtin.b_data,
+        42,
+        compare_un_b_data,
+        builtin.add_integer,
+      )
+    |> insert_with_by_ascending_key(
+        "bar" |> builtin.b_data,
+        14,
+        compare_un_b_data,
+        builtin.add_integer,
+      )
+    |> insert_with_by_ascending_key(
+        "baz" |> builtin.b_data,
+        1337,
+        compare_un_b_data,
+        builtin.add_integer,
+      )
 
   m == [
     Pair("bar" |> builtin.b_data, 14),
@@ -636,31 +630,29 @@ test insert_with_by_ascending_key_2() {
 }
 
 test insert_with_by_ascending_key_3() {
-  let compare_un_b_data =
-    fn(l, r) {
-      bytearray.compare(l |> builtin.un_b_data, r |> builtin.un_b_data)
-    }
+  let compare_un_b_data = fn(l, r) {
+    bytearray.compare(l |> builtin.un_b_data, r |> builtin.un_b_data)
+  }
 
-  let result =
-    []
-      |> insert_with_by_ascending_key(
-          "foo" |> builtin.b_data,
-          1,
-          compare_un_b_data,
-          builtin.add_integer,
-        )
-      |> insert_with_by_ascending_key(
-          "bar" |> builtin.b_data,
-          2,
-          compare_un_b_data,
-          builtin.add_integer,
-        )
-      |> insert_with_by_ascending_key(
-          "foo" |> builtin.b_data,
-          3,
-          compare_un_b_data,
-          builtin.add_integer,
-        )
+  let result = []
+    |> insert_with_by_ascending_key(
+        "foo" |> builtin.b_data,
+        1,
+        compare_un_b_data,
+        builtin.add_integer,
+      )
+    |> insert_with_by_ascending_key(
+        "bar" |> builtin.b_data,
+        2,
+        compare_un_b_data,
+        builtin.add_integer,
+      )
+    |> insert_with_by_ascending_key(
+        "foo" |> builtin.b_data,
+        3,
+        compare_un_b_data,
+        builtin.add_integer,
+      )
 
   result == [Pair("bar" |> builtin.b_data, 2), Pair("foo" |> builtin.b_data, 4)]
 }
@@ -736,20 +728,18 @@ pub fn repsert_by_ascending_key(
 }
 
 test repsert_by_ascending_key_1() {
-  let m =
-    []
-      |> repsert_by_ascending_key("foo", 42, bytearray.compare)
-      |> repsert_by_ascending_key("foo", 14, bytearray.compare)
+  let m = []
+    |> repsert_by_ascending_key("foo", 42, bytearray.compare)
+    |> repsert_by_ascending_key("foo", 14, bytearray.compare)
 
   m == [Pair("foo", 14)]
 }
 
 test repsert_by_ascending_key_2() {
-  let m =
-    []
-      |> repsert_by_ascending_key("foo", 42, bytearray.compare)
-      |> repsert_by_ascending_key("bar", 14, bytearray.compare)
-      |> repsert_by_ascending_key("baz", 1337, bytearray.compare)
+  let m = []
+    |> repsert_by_ascending_key("foo", 42, bytearray.compare)
+    |> repsert_by_ascending_key("bar", 14, bytearray.compare)
+    |> repsert_by_ascending_key("baz", 1337, bytearray.compare)
 
   m == [Pair("bar", 14), Pair("baz", 1337), Pair("foo", 42)]
 }
