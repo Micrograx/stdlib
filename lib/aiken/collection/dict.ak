@@ -201,6 +201,148 @@ pub fn singleton(key k: ByteArray, value v: value) -> Dict<key, value> {
   Dict([Pair(k, v)])
 }
 
+// ## Inspecting Forcibly
+
+/// More efficient version of [`find`](#find), which fails if the value isn't found in the dict.
+pub fn expect_find(self: Dict<key, value>, value v: value) -> ByteArray {
+  do_expect_find(self.inner, v)
+}
+
+fn do_expect_find(self: Pairs<ByteArray, value>, value v: value) -> ByteArray {
+  let head = builtin.head_list(self)
+  if v == head.2nd {
+    head.1st
+  } else {
+    do_expect_find(builtin.tail_list(self), v)
+  }
+}
+
+test expect_find_1() fail {
+  let x = expect_find(empty, foo)
+  x == x
+}
+
+test expect_find_2() {
+  expect_find(
+    empty
+      |> insert(foo, 14),
+    14,
+  ) == foo
+}
+
+test expect_find_3() fail {
+  let x = expect_find(
+    empty
+      |> insert(foo, 14),
+    42,
+  )
+  x == x
+}
+
+test expect_find_4() {
+  expect_find(
+    empty
+      |> insert(foo, 14)
+      |> insert(bar, 42)
+      |> insert(baz, 14),
+    14,
+  ) == baz
+}
+
+/// More efficient version of [`get`](#get), which fails if the key isn't found in the dict.
+pub fn expect_get(self: Dict<key, value>, key k: ByteArray) -> value {
+  do_expect_get(self.inner, k)
+}
+
+fn do_expect_get(self: Pairs<ByteArray, value>, key k: ByteArray) -> value {
+  let Pair(k2, _) as head = builtin.head_list(self)
+  if k == k2 {
+    head.2nd
+  } else {
+    do_expect_get(builtin.tail_list(self), k)
+  }
+}
+
+test expect_get_1() fail {
+  let x = expect_get(empty, foo)
+  x == x
+}
+
+test expect_get_2() {
+  let m = empty
+    |> insert(foo, "Aiken")
+    |> insert(bar, "awesome")
+  expect_get(m, key: foo) == "Aiken"
+}
+
+test expect_get_3() fail {
+  let m = empty
+    |> insert(foo, "Aiken")
+    |> insert(bar, "awesome")
+  let x = expect_get(m, key: baz)
+  x == x
+}
+
+test expect_get_4() fail {
+  let x = expect_get(fixture_get, "bcd")
+  x == x
+}
+
+test expect_get_5() fail {
+  let x = expect_get(fixture_get, "kkk")
+  x == x
+}
+
+test expect_get_6() {
+  expect_get(fixture_get, "jjj") == "10"
+}
+
+/// More efficient version of [`has_key`](#has_key), which fails if the key isn't present in the dict
+pub fn expect_has_key(self: Dict<key, value>, key k: ByteArray) -> Void {
+  expect do_expect_has_key(self.inner, k)
+}
+
+fn do_expect_has_key(self: Pairs<ByteArray, value>, key k: ByteArray) -> Bool {
+  builtin.head_list(self).1st == k || do_expect_has_key(
+    builtin.tail_list(self),
+    k,
+  )
+}
+
+test expect_has_key_1() fail {
+  expect_has_key(empty, foo)
+}
+
+test expect_has_key_2() {
+  expect_has_key(
+    empty
+      |> insert(foo, 14),
+    foo,
+  )
+}
+
+test expect_has_key_3() fail {
+  expect_has_key(
+    empty
+      |> insert(foo, 14),
+    bar,
+  )
+}
+
+test expect_has_key_4() {
+  expect_has_key(
+    empty
+      |> insert(foo, 14)
+      |> insert(bar, 42),
+    bar,
+  )
+}
+
+test expect_has_key_5() {
+  expect_has_key(fixture_get, "aaa")
+  expect_has_key(fixture_get, "jjj")
+}
+
 // ## Inspecting
 
 /// Finds a value in the dictionary, and returns the first key found to have that value.
@@ -352,8 +494,8 @@ test get_or_else_3() {
   get_or_else(m, key: baz, or_else: fn() { "missing?" }) == "missing?"
 }
 
-test get_4() {
-  let m = empty
+const fixture_get =
+  empty
     |> insert("aaa", "1")
     |> insert("bbb", "2")
     |> insert("ccc", "3")
@@ -365,55 +507,28 @@ test get_4() {
     |> insert("iii", "9")
     |> insert("jjj", "10")
 
-  get(m, "bcd") == None
+test get_4() {
+  get(fixture_get, "bcd") == None
 }
 
 test get_or_else_4() {
-  let m = empty
-    |> insert("aaa", "1")
-    |> insert("bbb", "2")
-    |> insert("ccc", "3")
-    |> insert("ddd", "4")
-    |> insert("eee", "5")
-    |> insert("fff", "6")
-    |> insert("ggg", "7")
-    |> insert("hhh", "8")
-    |> insert("iii", "9")
-    |> insert("jjj", "10")
-
-  get_or_else(m, "bcd", fn() { "0" }) == "0"
+  get_or_else(fixture_get, "bcd", fn() { "0" }) == "0"
 }
 
 test get_5() {
-  let m = empty
-    |> insert("aaa", "1")
-    |> insert("bbb", "2")
-    |> insert("ccc", "3")
-    |> insert("ddd", "4")
-    |> insert("eee", "5")
-    |> insert("fff", "6")
-    |> insert("ggg", "7")
-    |> insert("hhh", "8")
-    |> insert("iii", "9")
-    |> insert("jjj", "10")
-
-  get(m, "kkk") == None
+  get(fixture_get, "kkk") == None
 }
 
 test get_or_else_5() {
-  let m = empty
-    |> insert("aaa", "1")
-    |> insert("bbb", "2")
-    |> insert("ccc", "3")
-    |> insert("ddd", "4")
-    |> insert("eee", "5")
-    |> insert("fff", "6")
-    |> insert("ggg", "7")
-    |> insert("hhh", "8")
-    |> insert("iii", "9")
-    |> insert("jjj", "10")
+  get_or_else(fixture_get, "kkk", fn() { "" }) == ""
+}
 
-  get_or_else(m, "kkk", fn() { "" }) == ""
+test get_6() {
+  get(fixture_get, "jjj") == Some("10")
+}
+
+test get_or_else_6() {
+  get_or_else(fixture_get, "jjj", fn() { "" }) == "10"
 }
 
 /// Check if a key exists in the dictionary.
@@ -434,10 +549,10 @@ fn do_has_key(self: Pairs<ByteArray, value>, key k: ByteArray) -> Bool {
   when self is {
     [] -> False
     [Pair(k2, _), ..rest] ->
-      if builtin.less_than_equals_bytearray(k, k2) {
-        k == k2
-      } else {
+      if builtin.less_than_bytearray(k2, k) {
         do_has_key(rest, k)
+      } else {
+        k == k2
       }
   }
 }
@@ -469,6 +584,13 @@ test has_key_4() {
       |> insert(bar, 42),
     bar,
   )
+}
+
+test has_key_5() {
+  and {
+    has_key(fixture_get, "jjj"),
+    has_key(fixture_get, "aaa"),
+  }
 }
 
 /// Efficiently checks whether a dictionary is empty.
@@ -666,19 +788,38 @@ test delete_5() {
 }
 
 test delete_6() {
-  let m = empty
-    |> insert("aaa", 1)
-    |> insert("bbb", 2)
-    |> insert("ccc", 3)
-    |> insert("ddd", 4)
-    |> insert("eee", 5)
-    |> insert("fff", 6)
-    |> insert("ggg", 7)
-    |> insert("hhh", 8)
-    |> insert("iii", 9)
-    |> insert("jjj", 10)
+  delete(fixture_get, "bcd") == fixture_get
+}
 
-  delete(m, "bcd") == m
+const fixture_delete_jjj =
+  empty
+    |> insert("aaa", "1")
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+
+const fixture_delete_aaa =
+  empty
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
+
+test delete_7() {
+  and {
+    delete(fixture_get, "aaa") == fixture_delete_aaa,
+    delete(fixture_get, "jjj") == fixture_delete_jjj,
+  }
 }
 
 /// Like [`union_with`](#union_with) but allows specifying the behavior to adopt when a key is present
@@ -1144,19 +1285,143 @@ test pop_5() {
 }
 
 test pop_6() {
-  let m = empty
-    |> insert("aaa", 1)
-    |> insert("bbb", 2)
-    |> insert("ccc", 3)
-    |> insert("ddd", 4)
-    |> insert("eee", 5)
-    |> insert("fff", 6)
-    |> insert("ggg", 7)
-    |> insert("hhh", 8)
-    |> insert("iii", 9)
-    |> insert("jjj", 10)
+  pop(fixture_get, "bcd") == (None, fixture_get)
+}
 
-  pop(m, "bcd") == (None, m)
+test pop_7() {
+  and {
+    pop(fixture_get, "aaa") == (Some("1"), fixture_delete_aaa),
+    pop(fixture_get, "jjj") == (Some("10"), fixture_delete_jjj),
+  }
+}
+
+// ## Modifying Forcibly
+
+/// More efficient version of [`delete`](#delete), which fails if the key isn't present in the dict.
+pub fn expect_delete(self: Dict<key, value>, key: ByteArray) -> Dict<key, value> {
+  Dict { inner: do_expect_delete(self.inner, key) }
+}
+
+fn do_expect_delete(
+  self: Pairs<ByteArray, value>,
+  key k: ByteArray,
+) -> Pairs<ByteArray, value> {
+  let Pair(k2, _) as head = builtin.head_list(self)
+  if k == k2 {
+    builtin.tail_list(self)
+  } else {
+    [head, ..do_expect_delete(builtin.tail_list(self), k)]
+  }
+}
+
+test expect_delete_1() fail {
+  let x = expect_delete(empty, foo)
+  x == x
+}
+
+test expect_delete_2() {
+  let m = empty |> insert(foo, 14)
+  expect_delete(m, foo) == empty
+}
+
+test expect_delete_3() fail {
+  let m = empty |> insert(foo, 14)
+  let x = expect_delete(m, bar)
+  x == x
+}
+
+test expect_delete_4() {
+  let m = empty
+    |> insert(foo, 14)
+    |> insert(bar, 14)
+  !has_key(expect_delete(m, foo), foo)
+}
+
+test expect_delete_5() {
+  let m = empty
+    |> insert(foo, 14)
+    |> insert(bar, 14)
+  has_key(expect_delete(m, bar), foo)
+}
+
+test expect_delete_6() fail {
+  let x = expect_delete(fixture_get, "bcd")
+  x == x
+}
+
+test expect_delete_7() {
+  and {
+    expect_delete(fixture_get, "aaa") == fixture_delete_aaa,
+    expect_delete(fixture_get, "jjj") == fixture_delete_jjj,
+  }
+}
+
+/// More efficient version of [`pop`](#pop), which fails if the key isn't present in the dict.
+pub fn expect_pop(
+  self: Dict<key, value>,
+  key k: ByteArray,
+) -> (value, Dict<key, value>) {
+  let value, inner <- do_expect_pop(self.inner, k)
+  (value, Dict { inner })
+}
+
+fn do_expect_pop(
+  self: Pairs<ByteArray, value>,
+  key k: ByteArray,
+  return: fn(value, Pairs<ByteArray, value>) -> result,
+) -> result {
+  let Pair(k2, _) as head = builtin.head_list(self)
+  if k == k2 {
+    return(head.2nd, builtin.tail_list(self))
+  } else {
+    let value, tail <- do_expect_pop(builtin.tail_list(self), k)
+    return(value, [head, ..tail])
+  }
+}
+
+test expect_pop_1() fail {
+  let x = expect_pop(empty, foo)
+  x == x
+}
+
+test expect_pop_2() {
+  let m = empty
+    |> insert(foo, 14)
+  expect_pop(m, foo) == (14, empty)
+}
+
+test expect_pop_3() fail {
+  let m = empty
+    |> insert(foo, 14)
+  let x = expect_pop(m, bar)
+  x == x
+}
+
+test expect_pop_4() {
+  let m = empty
+    |> insert(foo, 14)
+    |> insert(bar, 14)
+  expect_pop(m, foo) == (14, empty |> insert(bar, 14))
+}
+
+test expect_pop_5() {
+  let m = empty
+    |> insert("a", 1)
+    |> insert("b", 2)
+    |> insert("c", 3)
+  expect_pop(m, "a") == (1, empty |> insert("b", 2) |> insert("c", 3))
+}
+
+test expect_pop_6() fail {
+  let x = expect_pop(fixture_get, "bcd")
+  x == x
+}
+
+test expect_pop_7() {
+  and {
+    expect_pop(fixture_get, "aaa") == ("1", fixture_delete_aaa),
+    expect_pop(fixture_get, "jjj") == ("10", fixture_delete_jjj),
+  }
 }
 
 // ## Combining
@@ -1340,6 +1605,55 @@ test fold_2() {
   foldl(fixture_1, zero: 0, with: fn(_, v, total) { v + total }) == 56
 }
 
+/// A function callback to accumulate two returned values at once. See also [`foldl2`](#foldl2) and [`foldr2`](#foldr2) about usage.
+pub type Fold2<a, b, result> =
+  fn(a, b) -> result
+
+pub fn foldl2(
+  self: Dict<key, value>,
+  zero_a: a,
+  zero_b: b,
+  with: fn(ByteArray, value, a, b, Fold2<a, b, result>) -> result,
+  return: Fold2<a, b, result>,
+) -> result {
+  do_foldl2(self.inner, zero_a, zero_b, with, return)
+}
+
+fn do_foldl2(
+  self: Pairs<ByteArray, value>,
+  zero_a: a,
+  zero_b: b,
+  with: fn(ByteArray, value, a, b, Fold2<a, b, result>) -> result,
+  return: Fold2<a, b, result>,
+) -> result {
+  when self is {
+    [] -> return(zero_a, zero_b)
+    [Pair(k, v), ..tail] -> {
+      let a, b <- with(k, v, zero_a, zero_b)
+      do_foldl2(tail, a, b, with, return)
+    }
+  }
+}
+
+test foldl2_size_and_merge() {
+  let size, merge <- foldl2(
+    fixture_get,
+    0,
+    "",
+    fn(k, v, size, merge, return) {
+      return(
+        size + 1,
+        builtin.append_bytearray(merge, builtin.append_bytearray(k, v)),
+      )
+    },
+  )
+
+  and {
+    size == 10,
+    merge == "aaa1bbb2ccc3ddd4eee5fff6ggg7hhh8iii9jjj10",
+  }
+}
+
 /// Fold over the key-value pairs in a dictionary. The fold direction follows keys
 /// in ascending order and is done from right-to-left.
 ///
@@ -1378,6 +1692,47 @@ test foldr_1() {
 
 test foldr_2() {
   foldr(fixture_1, zero: 0, with: fn(_, v, total) { v + total }) == 56
+}
+
+pub fn foldr2(
+  self: Dict<key, value>,
+  zero_a: a,
+  zero_b: b,
+  with: fn(ByteArray, value, a, b, Fold2<a, b, result>) -> result,
+  return: Fold2<a, b, result>,
+) -> result {
+  do_foldr2(self.inner, with, return)(zero_a, zero_b)
+}
+
+fn do_foldr2(
+  self: Pairs<key, value>,
+  with: fn(key, value, a, b, Fold2<a, b, result>) -> result,
+  return: Fold2<a, b, result>,
+) -> Fold2<a, b, result> {
+  when self is {
+    [] -> return
+    [Pair(k, v), ..tail] ->
+      do_foldr2(tail, with, fn(a, b) { with(k, v, a, b, return) })
+  }
+}
+
+test foldr2_size_and_merge() {
+  let size, merge <- foldr2(
+    fixture_get,
+    0,
+    "",
+    fn(k, v, size, merge, return) {
+      return(
+        size + 1,
+        builtin.append_bytearray(merge, builtin.append_bytearray(k, v)),
+      )
+    },
+  )
+
+  and {
+    size == 10,
+    merge == "jjj10iii9hhh8ggg7fff6eee5ddd4ccc3bbb2aaa1",
+  }
 }
 
 /// Get the inner list holding the dictionary data.
