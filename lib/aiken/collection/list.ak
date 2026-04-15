@@ -124,7 +124,7 @@ test any_3() {
   any([], fn(n) { n == 42 }) == False
 }
 
-/// Return Some(item) at the index or None if the index is out of range. The index is 0-based.
+/// Return `Some(item)` at the index or None if the index is out of range. The index is 0-based.
 ///
 /// ```aiken
 /// list.at([1, 2, 3], 1) == Some(2)
@@ -238,11 +238,15 @@ test find_3() {
   find([], fn(_) { True }) == None
 }
 
+test find_4() {
+  find([1, 2, 3], fn(x) { x >= 3 }) == Some(3)
+}
+
 /// Like [`find`](#find), but maps the found element to something else. This
 /// provides an efficient way to access and transform an element in a list.
 ///
 /// ```aiken
-/// list.find_map(["a", "bb", "ccc"], fn(x) {
+/// expect Some(2) = list.find_map(["a", "bb", "ccc"], fn(x) {
 ///   let len = bytearray.length(x)
 ///   if len > 1 {
 ///     Some(len)
@@ -269,6 +273,20 @@ pub fn find_map(
 
 test find_map_1() {
   find_map(
+    ["a", "bb", "ccc"],
+    fn(x) {
+      let len = bytearray.length(x)
+      if len > 1 {
+        Some(len)
+      } else {
+        None
+      }
+    },
+  ) == Some(2)
+}
+
+test find_map_2() {
+  find_map(
     [1, 2, 3],
     fn(x) {
       if x == 1 {
@@ -280,7 +298,7 @@ test find_map_1() {
   ) == Some(0)
 }
 
-test find_map_2() {
+test find_map_3() {
   find_map(
     [1, 2, 3],
     fn(x) {
@@ -293,7 +311,7 @@ test find_map_2() {
   ) == None
 }
 
-test find_map_3() {
+test find_map_4() {
   find_map([], fn(_) { Some(True) }) == None
 }
 
@@ -307,12 +325,7 @@ test find_map_3() {
 pub fn has(self: List<a>, elem: a) -> Bool {
   when self is {
     [] -> False
-    [x, ..xs] ->
-      if x == elem {
-        True
-      } else {
-        has(xs, elem)
-      }
+    [head, ..tail] -> head == elem || has(tail, elem)
   }
 }
 
@@ -457,6 +470,250 @@ test length_2() {
   length([1, 2, 3]) == 3
 }
 
+// ## Inspecting Forcibly
+
+/// More efficient version of [`any`](#any), but fails if no element satisfies the predicate.
+pub fn expect_any(self: List<a>, predicate: fn(a) -> Bool) -> Void {
+  if predicate(builtin.head_list(self)) {
+    Void
+  } else {
+    expect_any(builtin.tail_list(self), predicate)
+  }
+}
+
+test expect_any_1() {
+  expect_any([1, 2, 3], fn(n) { n > 0 })
+}
+
+test expect_any_2() fail {
+  expect_any([1, 2, 3], fn(n) { n > 42 })
+}
+
+test expect_any_3() fail {
+  expect_any([], fn(n) { n == 42 })
+}
+
+/// More efficient version of `at`, but fails if there's no element at the given index (or if the index is out of bound).
+pub fn expect_at(self: List<a>, index: Int) -> a {
+  if index >= 2 {
+    expect_at(builtin.tail_list(builtin.tail_list(self)), index - 2)
+  } else {
+    if index >= 1 {
+      expect_at(builtin.tail_list(self), index - 1)
+    } else {
+      if index == 0 {
+        builtin.head_list(self)
+      } else {
+        fail @"expect_at: not found"
+      }
+    }
+  }
+}
+
+test expect_at_1() fail {
+  let n = expect_at([1, 2, 3], -1)
+  n == n
+}
+
+test expect_at_2() fail {
+  let n = expect_at([], 0)
+  n == n
+}
+
+test expect_at_3() fail {
+  let n = expect_at([1, 2, 3], 3)
+  n == n
+}
+
+test expect_at_4() {
+  expect_at([1], 0) == 1
+}
+
+test expect_at_5() {
+  expect_at([1, 2, 3], 2) == 3
+}
+
+/// More efficient version of [`find`](#find), but fails if the element is not found.
+pub fn expect_find(self: List<a>, predicate: fn(a) -> Bool) -> a {
+  let elem = builtin.head_list(self)
+  if predicate(elem) {
+    elem
+  } else {
+    expect_find(builtin.tail_list(self), predicate)
+  }
+}
+
+test expect_find_1() {
+  expect_find([1, 2, 3], fn(x) { x == 1 }) == 1
+}
+
+test expect_find_2() fail {
+  let n = expect_find([1, 2, 3], fn(x) { x > 42 })
+  n == n
+}
+
+test expect_find_3() fail {
+  let n = expect_find([], fn(_) { True })
+  n == n
+}
+
+test expect_find_4() {
+  expect_find([1, 2, 3], fn(x) { x >= 3 }) == 3
+}
+
+/// More efficient version of [`find_map`](#find_map) but fails if no element
+/// is selected.
+///
+/// ```aiken
+/// expect 2 = list.expect_find_map(["a", "bb", "ccc"], fn(x, keep, discard) {
+///   let len = bytearray.length(x)
+///   if len > 1 {
+///     keep(len)
+///   } else {
+///     discard()
+///   }
+/// })
+/// ```
+pub fn expect_find_map(
+  self: List<a>,
+  select: fn(a, fn(b) -> b, fn() -> b) -> b,
+) -> b {
+  when self is {
+    [] -> fail @"expect_find_map: not found"
+    [head, ..tail] ->
+      select(head, identity, fn() { expect_find_map(tail, select) })
+  }
+}
+
+test expect_find_map_1() {
+  expect_find_map(
+    ["a", "bb", "ccc"],
+    fn(x, keep, discard) {
+      let len = bytearray.length(x)
+      if len > 1 {
+        keep(len)
+      } else {
+        discard()
+      }
+    },
+  ) == 2
+}
+
+test expect_find_map_2() {
+  expect_find_map(
+    [1, 2, 3],
+    fn(x, keep, discard) {
+      if x == 1 {
+        keep(x - 1)
+      } else {
+        discard()
+      }
+    },
+  ) == 0
+}
+
+test expect_find_map_3() fail {
+  let x = expect_find_map(
+    [1, 2, 3],
+    fn(x, keep, discard) {
+      if x > 42 {
+        keep(x)
+      } else {
+        discard()
+      }
+    },
+  )
+  x == x
+}
+
+test expect_find_map_4() fail {
+  let x = expect_find_map([], fn(_, keep, _) { keep(14) })
+  x == x
+}
+
+/// More efficient version of [`has`](#has) but fails if the element is missing.
+pub fn expect_has(self: List<a>, elem: a) -> Void {
+  expect do_expect_has(self, elem)
+}
+
+fn do_expect_has(self: List<a>, elem: a) -> Bool {
+  builtin.head_list(self) == elem || do_expect_has(
+    builtin.tail_list(self),
+    elem,
+  )
+}
+
+test expect_has_1() {
+  expect_has([1, 2, 3], 1)
+}
+
+test expect_has_2() fail {
+  expect_has([1, 2, 3], 14)
+}
+
+test expect_has_3() fail {
+  expect_has([], 14)
+}
+
+/// More efficient version of [`head`](#head), but fails if the list is empty.
+pub fn expect_head(self: List<a>) -> a {
+  builtin.head_list(self)
+}
+
+/// More efficient version of [`index_of`](#index_of), but fails if the element
+/// is not in the list.
+pub fn expect_index_of(self: List<a>, elem: a) -> Int {
+  if builtin.head_list(self) == elem {
+    0
+  } else {
+    expect_index_of(builtin.tail_list(self), elem) + 1
+  }
+}
+
+test expect_index_of_1() {
+  expect_index_of([1, 5, 2], 2) == 2
+}
+
+test expect_index_of_2() fail {
+  let i = expect_index_of([1, 7, 3], 4)
+  i == i
+}
+
+test expect_index_of_3() {
+  expect_index_of([1, 0, 9, 6], 6) == 3
+}
+
+test expect_index_of_4() fail {
+  let i = expect_index_of([], 6)
+  i == i
+}
+
+test expect_index_of_5() {
+  expect_index_of([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == 9
+}
+
+/// More efficient version of [`last`](#last), but fails when the list is empty.
+pub fn expect_last(self: List<a>) -> a {
+  let tail = builtin.tail_list(self)
+  when tail is {
+    [] -> builtin.head_list(self)
+    _ -> expect_last(tail)
+  }
+}
+
+test expect_last_1() fail {
+  let x = expect_last([])
+  x == x
+}
+
+test expect_last_2() {
+  expect_last([1]) == 1
+}
+
+test expect_last_3() {
+  expect_last([1, 2, 3, 4]) == 4
+}
+
 // ## Modifying
 
 // ### Extracting
@@ -495,6 +752,10 @@ test delete_4() {
   delete([2], 2) == []
 }
 
+test delete_5() {
+  delete([1, 2, 3, 1, 4], 4) == [1, 2, 3, 1]
+}
+
 /// Drop the first `n` elements of a list.
 ///
 /// ```aiken
@@ -513,12 +774,28 @@ pub fn drop(self: List<a>, n: Int) -> List<a> {
   }
 }
 
+test drop_0() {
+  drop([], 0) == []
+}
+
 test drop_1() {
   drop([], 42) == []
 }
 
 test drop_2() {
   drop([1, 2, 3], 2) == [3]
+}
+
+test drop_3() {
+  drop([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == []
+}
+
+test drop_4() {
+  drop([1, 2, 3, 4, 5], 3) == [4, 5]
+}
+
+test drop_5() {
+  drop([1, 2, 3], -1) == [1, 2, 3]
 }
 
 /// Returns the suffix of the given list after removing all elements that satisfy the predicate.
@@ -726,25 +1003,28 @@ test partition_5() {
 /// list.slice([1, 2, 3, 4, 5, 6], from: 1, to: -1) == [2, 3, 4, 5, 6]
 /// ```
 pub fn slice(self: List<a>, from: Int, to: Int) -> List<a> {
-  let (i, l) = if from >= 0 {
-    (from, None)
+  if from >= 0 {
+    self
+      |> drop(from)
+      |> take(
+          if to >= 0 {
+            to - from + 1
+          } else {
+            length(self) + to - from + 1
+          },
+        )
   } else {
-    let l = length(self)
-    (l + from, Some(l))
+    let i = length(self) + from
+    self
+      |> drop(i)
+      |> take(
+          if to >= 0 {
+            to - i + 1
+          } else {
+            to - from + 1
+          },
+        )
   }
-
-  let j = if to >= 0 {
-    to - i + 1
-  } else {
-    when l is {
-      Some(l) -> l + to - i + 1
-      None -> length(self) + to - i + 1
-    }
-  }
-
-  self
-    |> drop(i)
-    |> take(j)
 }
 
 test slice_1() {
@@ -809,6 +1089,13 @@ test span_4() {
   span([1, 2, 3], 42) == ([1, 2, 3], [])
 }
 
+test span_5() {
+  span([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == (
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  )
+}
+
 /// Get elements of a list after the first one, if any.
 ///
 /// ```aiken
@@ -853,6 +1140,18 @@ test take_1() {
 
 test take_2() {
   take([1, 2, 3], 2) == [1, 2]
+}
+
+test take_3() {
+  take([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+}
+
+test take_4() {
+  take([1, 2, 3, 4], 3) == [1, 2, 3]
+}
+
+test take_5() {
+  take([1, 2, 3, 4], -2) == []
 }
 
 /// Returns the longest prefix of the given list where all elements satisfy the predicate.
@@ -913,8 +1212,161 @@ test unique_2() {
   unique(xs) == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 }
 
+// ### Extracting Forcibly
+
+/// More efficient version of [`delete`](#delete), which also fails when the element is NOT in the list.
+pub fn expect_delete(self: List<a>, elem: a) -> List<a> {
+  let head = builtin.head_list(self)
+  if head == elem {
+    builtin.tail_list(self)
+  } else {
+    [head, ..expect_delete(builtin.tail_list(self), elem)]
+  }
+}
+
+test expect_delete_1() fail {
+  let x = expect_delete([], 42)
+  x == x
+}
+
+test expect_delete_2() {
+  expect_delete([1, 2, 3, 1], 1) == [2, 3, 1]
+}
+
+test expect_delete_3() fail {
+  let x = expect_delete([1, 2, 3], 14)
+  x == x
+}
+
+test expect_delete_4() {
+  expect_delete([2], 2) == []
+}
+
+test expect_delete_5() {
+  expect_delete([1, 2, 3, 1, 4], 4) == [1, 2, 3, 1]
+}
+
+/// More efficient version of [`drop`](#drop), which fails when there's less than `n` elements in the list.
+///
+/// Yields the list when `n` is negative.
+pub fn expect_drop(self: List<a>, n: Int) -> List<a> {
+  if n >= 2 {
+    expect_drop(builtin.tail_list(builtin.tail_list(self)), n - 2)
+  } else {
+    if n <= 0 {
+      self
+    } else {
+      builtin.tail_list(self)
+    }
+  }
+}
+
+test expect_drop_0() {
+  expect_drop([], 0) == []
+}
+
+test expect_drop_1() fail {
+  let x = expect_drop([], 42)
+  x == x
+}
+
+test expect_drop_2() {
+  expect_drop([1, 2, 3], 2) == [3]
+}
+
+test expect_drop_3() {
+  expect_drop([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == []
+}
+
+test expect_drop_4() {
+  expect_drop([1, 2, 3, 4, 5], 3) == [4, 5]
+}
+
+test expect_drop_5() {
+  expect_drop([1, 2, 3], -1) == [1, 2, 3]
+}
+
+/// More efficient version of [`init`](#init), which fails when the list is empty.
+pub fn expect_init(self: List<a>) -> List<a> {
+  when self is {
+    [_] -> []
+    _ -> [builtin.head_list(self), ..expect_init(builtin.tail_list(self))]
+  }
+}
+
+test expect_init_1() fail {
+  let x = expect_init([])
+  x == x
+}
+
+test expect_init_2() {
+  expect_init([1]) == []
+}
+
+test expect_init_3() {
+  expect_init([1, 2, 3, 4]) == [1, 2, 3]
+}
+
+/// More efficient version of [`tail`](#tail), which fails when the list is empty.
+pub fn expect_tail(self: List<a>) -> List<a> {
+  builtin.tail_list(self)
+}
+
+test expect_tail_1() {
+  expect_tail([1, 2, 3]) == [2, 3]
+}
+
+test expect_tail_2() fail {
+  let x = expect_tail([])
+  x == x
+}
+
+/// More efficient version of [`take`](#take), which fails when the list contains less element than wanted.
+///
+/// Yields an empty list when `n` is negative.
+pub fn expect_take(self: List<a>, n: Int) -> List<a> {
+  if n >= 2 {
+    let tail = builtin.tail_list(self)
+    [
+      builtin.head_list(self),
+      builtin.head_list(tail),
+      ..expect_take(builtin.tail_list(tail), n - 2)
+    ]
+  } else {
+    if n <= 0 {
+      []
+    } else {
+      [builtin.head_list(self)]
+    }
+  }
+}
+
+test expect_take_1() fail {
+  let x = expect_take([], 42)
+  x == x
+}
+
+test expect_take_2() {
+  expect_take([1, 2, 3], 2) == [1, 2]
+}
+
+test expect_take_3() {
+  expect_take([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+  ]
+}
+
+test expect_take_4() {
+  expect_take([1, 2, 3, 4], 3) == [1, 2, 3]
+}
+
+test expect_take_5() {
+  expect_take([1, 2, 3, 4], -2) == []
+}
+
 // ### Mapping
 
+/// More efficient
 /// Map elements of a list into a new list and flatten the result.
 ///
 /// ```aiken
