@@ -12,6 +12,7 @@
 
 use aiken/builtin
 use aiken/crypto/bitwise.{State}
+use aiken/crypto/bls12_381.{DomainSeparationTag}
 use aiken/crypto/bls12_381/scalar.{Scalar}
 
 /// The compressed generator of the G1 group of the BLS12-381 curve.
@@ -107,7 +108,16 @@ test scale_1() {
 
 /// Hashes arbitrary data to a point in the G1 group.
 /// You can use the `domain_separation_tag` parameter to cryptographically separate different uses of the hash function between applications.
-pub fn hash_to_group(bytes: ByteArray, domain_separation_tag: ByteArray) {
+///
+/// See also the following [`DomainSeparationTag`](../bls12_381.html#DomainSeparationTag):
+///
+/// - [basic](../bls12_381.html#domain_separation_tag_nul)
+/// - [augmented](../bls12_381.html#domain_separation_tag_aug)
+/// - [proof of possession](../bls12_381.html#domain_separation_tag_pop)
+pub fn hash_to_group(
+  bytes: ByteArray,
+  domain_separation_tag: DomainSeparationTag,
+) {
   builtin.bls12_381_g1_hash_to_group(bytes, domain_separation_tag)
 }
 

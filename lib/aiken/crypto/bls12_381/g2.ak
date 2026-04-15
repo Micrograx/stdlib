@@ -12,7 +12,16 @@
 
 use aiken/builtin
 use aiken/crypto/bitwise.{State}
+use aiken/crypto/bls12_381.{DomainSeparationTag}
 use aiken/crypto/bls12_381/scalar.{Scalar}
+
+/// Domain separation tag for the basic BLS scheme, as defined in:
+/// <https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#name-basic>
+///
+/// > [!CAUTION]
+/// > **DEPRECATED**: use [`aiken/crypto/bls12_381.{domain_separation_tag_nul}`](../bls12_381.html#domain_separation_tag_nul) instead.
+pub const domain_separation_tag_basic: DomainSeparationTag =
+  "BLS_SIG_BLS12381G1_XMD:SHA-256_SSWU_RO_NUL_"
 
 /// The compressed generator of the G2 group of the BLS12-381 curve.
 /// This constant represents a fixed base point on the elliptic curve.
@@ -20,10 +29,6 @@ use aiken/crypto/bls12_381/scalar.{Scalar}
 /// More explicit, any points in plutus data or scripts must be decompressed before usage onchain.
 pub const generator: G2Element =
   #<Bls12_381, G2>"93e02b6052719f607dacd3a088274f65596bd0d09920b61ab5da61bbdc7f5049334cf11213945d57e5ac7d055d042b7e024aa2b2f08f0a91260805272dc51051c6e47ad4fa403b02b4510b647ae3d1770bac0326a805bbefd48056c8c121bdb8"
-
-/// Basic Domain Separation Tag as per the [IETF](https://www.ietf.org/archive/id/draft-irtf-cfrg-bls-signature-05.html#section-4.2.1).
-pub const domain_separation_tag_basic =
-  "BLS_SIG_BLS12381G2_XMD:SHA-256_SSWU_RO_NUL_"
 
 test generator_1() {
   builtin.bls12_381_g2_scalar_mul(scalar.field_prime, generator) == #<Bls12_381, G2>"c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
@@ -61,7 +66,7 @@ test zero_1() {
 /// > - The most significant bit, when set, indicates that the point is in compressed form. Otherwise, the point is in uncompressed form.
 /// > - The second-most significant bit indicates that the point is at infinity. If this bit is set, the remaining bits of the group element's encoding should be set to zero.
 /// > - The third-most significant bit is set if (and only if) this point is in compressed form and it is not the point at infinity and its y-coordinate is the lexicographically largest of the two associated with the encoded x-coordinate.</i>
-pub fn compress(point) {
+pub fn compress(point: G2Element) -> ByteArray {
   builtin.bls12_381_g2_compress(point)
 }
 
@@ -71,7 +76,7 @@ test compress_1() {
 }
 
 /// Decompresses a point in the G2 group from its compressed form.
-pub fn decompress(bytes) {
+pub fn decompress(bytes: ByteArray) -> G2Element {
   builtin.bls12_381_g2_uncompress(bytes)
 }
 
@@ -80,7 +85,7 @@ test decompress_1() {
   generator == g2
 }
 
-pub fn equal(left, right) {
+pub fn equal(left: G2Element, right: G2Element) {
   builtin.bls12_381_g2_equal(left, right)
 }
 
@@ -92,12 +97,12 @@ test equal_1() {
 }
 
 /// Adds two points in the G2 group.
-pub fn add(left, right) {
+pub fn add(left: G2Element, right: G2Element) {
   builtin.bls12_381_g2_add(left, right)
 }
 
 /// Subtracts one point in the G2 group from another.
-pub fn sub(left, right) {
+pub fn sub(left: G2Element, right: G2Element) {
   builtin.bls12_381_g2_add(left, builtin.bls12_381_g2_neg(right))
 }
 
@@ -107,7 +112,7 @@ test sub_1() {
 
 /// Exponentiates a point in the G2 group with a `scalar`.
 /// This operation is equivalent to the repeated addition of the point with itself `e` times.
-pub fn scale(point, e: State<Scalar>) {
+pub fn scale(point: G2Element, e: State<Scalar>) {
   builtin.bls12_381_g2_scalar_mul(scalar.to_int(e), point)
 }
 
@@ -118,7 +123,16 @@ test scale_1() {
 
 /// Hashes arbitrary data to a point in the G2 group.
 /// You can use the `domain_separation_tag` parameter to cryptographically separate different uses of the hash function between applications.
-pub fn hash_to_group(bytes, domain_separation_tag) {
+///
+/// See also the following [`DomainSeparationTag`](../bls12_381.html#DomainSeparationTag):
+///
+/// - [basic](../bls12_381.html#domain_separation_tag_nul)
+/// - [augmented](../bls12_381.html#domain_separation_tag_aug)
+/// - [proof of possession](../bls12_381.html#domain_separation_tag_pop)
+pub fn hash_to_group(
+  bytes: ByteArray,
+  domain_separation_tag: DomainSeparationTag,
+) {
   builtin.bls12_381_g2_hash_to_group(bytes, domain_separation_tag)
 }
 

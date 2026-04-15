@@ -1,5 +1,6 @@
 use aiken/builtin.{bls12_381_final_verify, bls12_381_miller_loop}
 use aiken/crypto/bitwise.{State}
+use aiken/crypto/bls12_381.{domain_separation_tag_nul}
 use aiken/crypto/bls12_381/g1
 use aiken/crypto/bls12_381/g2
 use aiken/crypto/bls12_381/scalar.{Scalar}
@@ -20,11 +21,11 @@ pub fn miller_loop(q: G1Element, p: G2Element) -> MillerLoopResult {
 /// let message: ByteArray = #"acab"
 ///
 /// let challenge: G2Element =
-///   message |> g2.hash_to_group(g2.domain_separation_tag_basic)
+///   message |> g2.hash_to_group(domain_separation_tag_nul)
 ///
 /// let witness: G2Element =
 ///   message
-///     |> g2.hash_to_group(g2.domain_separation_tag_basic)
+///     |> g2.hash_to_group(domain_separation_tag_nul)
 ///     |> g2.scale(secret)
 ///
 /// final_exponentiation(
@@ -48,10 +49,10 @@ test simple_miller_loop_with_final_exponentiation() {
   let message: ByteArray = #"acab"
 
   let challenge: G2Element = message
-    |> g2.hash_to_group(g2.domain_separation_tag_basic)
+    |> g2.hash_to_group(domain_separation_tag_nul)
 
   let witness: G2Element = message
-    |> g2.hash_to_group(g2.domain_separation_tag_basic)
+    |> g2.hash_to_group(domain_separation_tag_nul)
     |> g2.scale(secret)
 
   final_exponentiation(
