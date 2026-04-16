@@ -14,6 +14,8 @@
 
 use aiken/builtin
 use aiken/collection/dict/strategy.{InsertStrategy, UnionStrategy}
+use aiken/collection/pairs
+use aiken/primitive/int
 
 /// An opaque `Dict`. The type is opaque because the module maintains some
 /// invariant, namely: there's only one occurrence of a given key in the dictionary.
@@ -34,7 +36,7 @@ pub opaque type Dict<key, value> {
 
 // ## Constructing
 
-/// An empty dictionnary.
+/// An empty dictionary.
 /// ```aiken
 /// dict.to_pairs(dict.empty) == []
 /// ```
@@ -203,6 +205,74 @@ pub fn singleton(key k: ByteArray, value v: value) -> Dict<key, value> {
 
 // ## Inspecting Forcibly
 
+/// More efficient version of [`contains`](#contains), which fails if the given dict isn't fully contained in the source one.
+pub fn expect_contains(
+  self: Dict<key, value>,
+  subset: Dict<key, value>,
+  compare: fn(value, value) -> Ordering,
+) -> Void {
+  do_expect_contains(self.inner, subset.inner, compare)
+}
+
+fn do_expect_contains(
+  self: Pairs<ByteArray, value>,
+  subset: Pairs<ByteArray, value>,
+  compare: fn(value, value) -> Ordering,
+) -> Void {
+  when subset is {
+    [] -> Void
+    [head_subset, ..tail_subset] -> {
+      let head_superset, tail_superset <- pairs.expect_pop_until_key_and_then(
+        self,
+        head_subset.1st,
+      )
+      expect Less != compare(head_superset, head_subset.2nd)
+      do_expect_contains(tail_superset, tail_subset, compare)
+    }
+  }
+}
+
+test expect_contains_1() {
+  expect_contains(fixture_superset, empty, int.compare)
+}
+
+test expect_contains_2() {
+  expect_contains(fixture_superset, from_pairs([Pair("a", 1)]), int.compare)
+}
+
+test expect_contains_3() {
+  expect_contains(
+    fixture_superset,
+    from_pairs([Pair("a", 1), Pair("b", 42)]),
+    int.compare,
+  )
+}
+
+test expect_contains_4() fail {
+  expect_contains(fixture_superset, from_pairs([Pair("a", 14)]), int.compare)
+}
+
+test expect_contains_5() fail {
+  expect_contains(
+    fixture_superset,
+    from_pairs([Pair("a", 1), Pair("c", 1)]),
+    int.compare,
+  )
+}
+
+test expect_contains_bench() {
+  expect_contains(
+    fixture_contains_superset,
+    fixture_contains_subset,
+    int.compare,
+  )
+  expect_contains(
+    fixture_contains_superset,
+    fixture_contains_superset,
+    int.compare,
+  )
+}
+
 /// More efficient version of [`find`](#find), which fails if the value isn't found in the dict.
 pub fn expect_find(self: Dict<key, value>, value v: value) -> ByteArray {
   do_expect_find(self.inner, v)
@@ -344,6 +414,110 @@ test expect_has_key_5() {
 }
 
 // ## Inspecting
+
+/// Check whether a dictionary is fully _"contained"_ within another using the comparison function. A dict is _contained_ in another if:
+///
+/// 1. All its keys also exist in the first dict
+/// 2. Each value is at least as large according to the comparison function
+///
+/// ```aiken
+/// let superset = dict.empty
+///   |> dict.insert("a", 10)
+///   |> dict.insert("b", 42)
+///
+/// dict.contains(superset, dict.empty, int.compare)
+/// dict.contains(superset, dict.from_pairs([Pair("a", 1)]), int.compare)
+/// dict.contains(superset, dict.from_pairs([Pair("a", 1), Pair("b", 42)]), int.compare)
+/// !dict.contains(superset, dict.from_pairs([Pair("a", 14)]), int.compare)
+/// !dict.contains(superset, dict.from_pairs([Pair("a", 1), Pair("c", 1)]), int.compare)
+/// ```
+pub fn contains(
+  self: Dict<key, value>,
+  subset: Dict<key, value>,
+  compare: fn(value, value) -> Ordering,
+) -> Bool {
+  do_contains(self.inner, subset.inner, compare)
+}
+
+fn do_contains(
+  self: Pairs<ByteArray, value>,
+  subset: Pairs<ByteArray, value>,
+  compare: fn(value, value) -> Ordering,
+) -> Bool {
+  when subset is {
+    [] -> True
+    [head_subset, ..tail_subset] -> {
+      let head_superset, tail_superset <- pairs.pop_until_key_and_then(
+        self,
+        head_subset.1st,
+      )
+      and {
+        when head_superset is {
+          None -> False
+          Some(head_superset) -> Less != compare(head_superset, head_subset.2nd)
+        },
+        do_contains(tail_superset, tail_subset, compare),
+      }
+    }
+  }
+}
+
+const fixture_superset =
+  empty
+    |> insert("a", 10)
+    |> insert("b", 42)
+
+test contains_1() {
+  contains(fixture_superset, empty, int.compare)
+}
+
+test contains_2() {
+  contains(fixture_superset, from_pairs([Pair("a", 1)]), int.compare)
+}
+
+test contains_3() {
+  contains(
+    fixture_superset,
+    from_pairs([Pair("a", 1), Pair("b", 42)]),
+    int.compare,
+  )
+}
+
+test contains_4() {
+  !contains(fixture_superset, from_pairs([Pair("a", 14)]), int.compare)
+}
+
+test contains_5() {
+  !contains(
+    fixture_superset,
+    from_pairs([Pair("a", 1), Pair("c", 1)]),
+    int.compare,
+  )
+}
+
+const fixture_contains_superset =
+  empty
+    |> insert("a", 1)
+    |> insert("b", 2)
+    |> insert("c", 3)
+    |> insert("d", 4)
+    |> insert("e", 5)
+    |> insert("f", 6)
+    |> insert("g", 7)
+    |> insert("h", 8)
+    |> insert("i", 9)
+    |> insert("j", 10)
+
+const fixture_contains_subset =
+  empty
+    |> insert("a", 1)
+
+test contains_bench() {
+  and {
+    contains(fixture_contains_superset, fixture_contains_subset, int.compare),
+    contains(fixture_contains_superset, fixture_contains_superset, int.compare),
+  }
+}
 
 /// Finds a value in the dictionary, and returns the first key found to have that value.
 ///
@@ -823,8 +997,8 @@ test delete_7() {
 }
 
 /// Like [`union_with`](#union_with) but allows specifying the behavior to adopt when a key is present
-/// only in the right dictionary. The first value received correspond to the value in the right
-/// dictionnary. When passing `None`, the value is removed and not present in the union.
+/// only in the right dictionary. The first value received corresponds to the value in the right
+/// dictionary. When passing `None`, the value is removed and not present in the union.
 ///
 /// ```aiken
 /// let left_dict = dict.from_pairs([Pair("a", 100), Pair("b", 200)])
@@ -1057,7 +1231,9 @@ test filter_3() {
   filter(fixture_1, fn(k, _) { k == bar }) == expected
 }
 
-/// Insert a value in the dictionary at a given key. If the key already exists, its value is **overridden**. If you need ways to combine keys together, use (`insert_with`)[#insert_with].
+/// Insert a value in the dictionary at a given key. If the key already exists,
+/// its value is **overridden**. If you need ways to combine keys together, use
+/// [`insert_with`](#insert_with).
 ///
 /// ```aiken
 /// let result =
@@ -1113,12 +1289,12 @@ test insert_2() {
   insert(m1, bar, 14) == insert(m2, foo, 42)
 }
 
-/// Insert a value in the dictionary at a given key. When the key already exist, the provided
+/// Insert a value in the dictionary at a given key. When the key already exists, the provided
 /// merge function is called. The value existing in the dictionary is passed as the second argument
 /// to the merge function, and the new value is passed as the third argument.
 ///
 /// ```aiken
-/// use aiken/collection/dict/union
+/// use aiken/collection/dict/strategy
 ///
 /// let result =
 ///   dict.empty
@@ -1484,8 +1660,8 @@ test union_4() {
 }
 
 /// Like [`union`](#union) but allows specifying the behavior to adopt when a key is present
-/// in both dictionaries. The first value received correspond to the value in the left
-/// dictionnary, whereas the second argument corresponds to the value in the right dictionnary.
+/// in both dictionaries. The first value received corresponds to the value in the left
+/// dictionary, whereas the second argument corresponds to the value in the right dictionary.
 ///
 /// When passing `None`, the value is removed and not present in the union.
 ///
