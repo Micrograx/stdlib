@@ -1024,6 +1024,139 @@ test map_2() {
   map(fixture, with: fn(_, v) { v + 1 }) == [Pair("a", 2), Pair("b", 3)]
 }
 
+/// Drop elements from an associative list until a predicate is satisfied.
+/// Returns the first key/value pair that satisfies the predicate, and the rest
+/// of the list after that key/value pair.
+///
+/// ```aiken
+/// let predicate = fn(k, v) { k == "a" && v > 1 }
+///
+/// expect (None, []) = pairs.pop_until([], predicate)
+/// expect (None, []) = pairs.pop_until([Pair("a", 1), Pair("b", 2)], predicate)
+/// expect (Some(Pair("a", 3), []) = pairs.pop_until([Pair("a", 1), Pair("b", 2), Pair("a", 3)], predicate)
+/// ```
+pub fn pop_until(
+  self: Pairs<key, value>,
+  until: fn(key, value) -> Bool,
+) -> (Option<Pair<key, value>>, Pairs<key, value>) {
+  when self is {
+    [] -> (None, self)
+    [Pair(k, v) as head, ..tail] ->
+      if until(k, v) {
+        (Some(head), tail)
+      } else {
+        pop_until(tail, until)
+      }
+  }
+}
+
+test pop_until_1() {
+  pop_until([], fn(k, _) { k == "a" }) == (None, [])
+}
+
+test pop_until_2() {
+  pop_until([Pair("a", 1), Pair("b", 2)], fn(k, _) { k == "a" }) == (
+    Some(Pair("a", 1)),
+    [Pair("b", 2)],
+  )
+}
+
+test pop_until_3() {
+  pop_until([Pair("a", 1), Pair("b", 2), Pair("c", 3)], fn(k, _) { k == "c" }) == (
+    Some(Pair("c", 3)),
+    [],
+  )
+}
+
+test pop_until_4() {
+  pop_until([Pair("a", 1), Pair("b", 2), Pair("c", 3)], fn(_, _) { False }) == (
+    None,
+    [],
+  )
+}
+
+test pop_until_bench() {
+  and {
+    pop_until(fixture_bench, fn(k, _) { k == "a" }).1st == Some(Pair("a", 1)),
+    pop_until(fixture_bench, fn(k, _) { k == "f" }).1st == Some(Pair("f", 6)),
+    pop_until(fixture_bench, fn(k, _) { k == "k" }).1st == Some(Pair("k", 11)),
+  }
+}
+
+/// Like [`pop_until`](#pop_until) but leverages backpassing.
+///
+/// ```aiken
+/// let predicate = fn(k, v) { k == "a" && v > 1 }
+///
+/// expect None, [] <- pairs.pop_until_and_then([], predicate)
+/// expect None, [] <- pairs.pop_until_and_then([Pair("a", 1), Pair("b", 2)], predicate)
+/// expect Some(Pair("a", 3), [] <- pairs.pop_until_and_then([Pair("a", 1), Pair("b", 2), Pair("a", 3)], predicate)
+/// ```
+pub fn pop_until_and_then(
+  self: Pairs<key, value>,
+  until: fn(key, value) -> Bool,
+  return: fn(Option<Pair<key, value>>, Pairs<key, value>) -> result,
+) -> result {
+  when self is {
+    [] -> return(None, self)
+    [Pair(k, v) as head, ..tail] ->
+      if until(k, v) {
+        return(Some(head), tail)
+      } else {
+        pop_until_and_then(tail, until, return)
+      }
+  }
+}
+
+test pop_until_and_then_1() {
+  expect None, [] <- pop_until_and_then([], fn(k, _) { k == "a" })
+  Void
+}
+
+test pop_until_and_then_2() {
+  expect Some(Pair("a", 1)), [Pair("b", 2)] <- pop_until_and_then(
+    [Pair("a", 1), Pair("b", 2)],
+    fn(k, _) { k == "a" },
+  )
+  Void
+}
+
+test pop_until_and_then_3() {
+  expect Some(Pair("c", 3)), [] <- pop_until_and_then(
+    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
+    fn(k, _) { k == "c" },
+  )
+  Void
+}
+
+test pop_until_and_then_4() {
+  expect None, [] <- pop_until_and_then(
+    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
+    fn(_, _) { False },
+  )
+  Void
+}
+
+test pop_until_and_then_bench() {
+  and {
+    pop_until_and_then(
+      fixture_bench,
+      fn(k, _) { k == "a" },
+      fn(kv, _) { kv == Some(Pair("a", 1)) },
+    ),
+    pop_until_and_then(
+      fixture_bench,
+      fn(k, _) { k == "f" },
+      fn(kv, _) { kv == Some(Pair("f", 6)) },
+    ),
+    pop_until_and_then(
+      fixture_bench,
+      fn(k, _) { k == "k" },
+      fn(kv, _) { kv == Some(Pair("k", 11)) },
+    ),
+  }
+}
+
 /// Drop elements from an associative list until a given key is encountered.
 /// Returns the first value at that key (if any), and the rest of the list after
 /// that key/value pair.
@@ -1255,8 +1388,135 @@ pub fn expect_delete_last(
   }
 }
 
-/// More efficient version of [`pop_until`](#pop_until) which fails if no element is
-/// found satisfying the predicate.
+/// More efficient version of [`pop_until`](#pop_until), which fails if there's
+/// no element matching the predicate.
+///
+/// ```aiken
+/// let predicate = fn(k, v) { k == "a" && v > 1 }
+///
+/// 💥 = pairs.expect_pop_until([], predicate)
+/// 💥 = pairs.expect_pop_until([Pair("a", 1), Pair("b", 2)], predicate)
+/// expect (Pair("a", 3), []) = pairs.expect_pop_until([Pair("a", 1), Pair("b", 2), Pair("a", 3)], predicate)
+/// ```
+pub fn expect_pop_until(
+  self: Pairs<key, value>,
+  until: fn(key, value) -> Bool,
+) -> (Pair<key, value>, Pairs<key, value>) {
+  let Pair(k, v) as head = builtin.head_list(self)
+  if until(k, v) {
+    (head, builtin.tail_list(self))
+  } else {
+    expect_pop_until(builtin.tail_list(self), until)
+  }
+}
+
+test expect_pop_until_1() fail {
+  let x = expect_pop_until([], fn(k, _) { k == "a" })
+  x == x
+}
+
+test expect_pop_until_2() {
+  expect_pop_until([Pair("a", 1), Pair("b", 2)], fn(k, _) { k == "a" }) == (
+    Pair("a", 1),
+    [Pair("b", 2)],
+  )
+}
+
+test expect_pop_until_3() {
+  expect_pop_until(
+    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
+    fn(k, _) { k == "c" },
+  ) == (Pair("c", 3), [])
+}
+
+test expect_pop_until_4() fail {
+  let x = expect_pop_until(
+    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
+    fn(_, _) { False },
+  )
+  x == x
+}
+
+test expect_pop_until_bench() {
+  and {
+    expect_pop_until(fixture_bench, fn(k, _) { k == "a" }).1st == Pair("a", 1),
+    expect_pop_until(fixture_bench, fn(k, _) { k == "f" }).1st == Pair("f", 6),
+    expect_pop_until(fixture_bench, fn(k, _) { k == "k" }).1st == Pair("k", 11),
+  }
+}
+
+/// A version of [`expect_pop_until`](#expect_pop_until) which leverages backpassing.
+///
+/// ```aiken
+/// let predicate = fn(k, v) { k == "a" && v > 1 }
+///
+/// 💥 <- pairs.expect_pop_until_and_then([], predicate)
+/// 💥 <- pairs.expect_pop_until([Pair("a", 1), Pair("b", 2)], predicate)
+/// expect Pair("a", 3), [] <- pairs.expect_pop_until_and_then([Pair("a", 1), Pair("b", 2), Pair("a", 3)], predicate)
+/// ```
+pub fn expect_pop_until_and_then(
+  self: Pairs<key, value>,
+  until: fn(key, value) -> Bool,
+  return: fn(Pair<key, value>, Pairs<key, value>) -> result,
+) -> result {
+  let Pair(k, v) as head = builtin.head_list(self)
+  if until(k, v) {
+    return(head, builtin.tail_list(self))
+  } else {
+    expect_pop_until_and_then(builtin.tail_list(self), until, return)
+  }
+}
+
+test expect_pop_until_and_then_1() fail {
+  let x, _ <- expect_pop_until_and_then([], fn(k, _) { k == "a" })
+  x == x
+}
+
+test expect_pop_until_and_then_2() {
+  expect Pair("a", 1), [Pair("b", 2)] <- expect_pop_until_and_then(
+    [Pair("a", 1), Pair("b", 2)],
+    fn(k, _) { k == "a" },
+  )
+  Void
+}
+
+test expect_pop_until_and_then_3() {
+  expect Pair("c", 3), [] <- expect_pop_until_and_then(
+    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
+    fn(k, _) { k == "c" },
+  )
+  Void
+}
+
+test expect_pop_until_and_then_4() fail {
+  let x, _ <- expect_pop_until_and_then(
+    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
+    fn(_, _) { False },
+  )
+  x == x
+}
+
+test expect_pop_until_and_then_bench() {
+  and {
+    expect_pop_until_and_then(
+      fixture_bench,
+      fn(k, _) { k == "a" },
+      fn(kv, _) { kv == Pair("a", 1) },
+    ),
+    expect_pop_until_and_then(
+      fixture_bench,
+      fn(k, _) { k == "f" },
+      fn(kv, _) { kv == Pair("f", 6) },
+    ),
+    expect_pop_until_and_then(
+      fixture_bench,
+      fn(k, _) { k == "k" },
+      fn(kv, _) { kv == Pair("k", 11) },
+    ),
+  }
+}
+
+/// More efficient version of [`pop_until_key`](#pop_until_key) which fails if the key isn't found.
 ///
 /// ```aiken
 /// 💥 = pairs.expect_pop_until_key([], "a")
