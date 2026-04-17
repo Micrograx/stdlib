@@ -48,6 +48,59 @@ const bar = #"626172"
 
 const baz = #"62617a"
 
+const fixture_bench =
+  empty
+    |> insert("aaa", "1")
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
+    |> insert("kkk", "11")
+
+const fixture_delete_aaa =
+  empty
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
+    |> insert("kkk", "11")
+
+const fixture_delete_fff =
+  empty
+    |> insert("aaa", "1")
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
+    |> insert("kkk", "11")
+
+const fixture_delete_kkk =
+  empty
+    |> insert("aaa", "1")
+    |> insert("bbb", "2")
+    |> insert("ccc", "3")
+    |> insert("ddd", "4")
+    |> insert("eee", "5")
+    |> insert("fff", "6")
+    |> insert("ggg", "7")
+    |> insert("hhh", "8")
+    |> insert("iii", "9")
+    |> insert("jjj", "10")
+
 const fixture_1 =
   empty
     |> insert(foo, 42)
@@ -354,17 +407,21 @@ test expect_get_3() fail {
 }
 
 test expect_get_4() fail {
-  let x = expect_get(fixture_get, "bcd")
+  let x = expect_get(fixture_bench, "bcd")
   x == x
 }
 
 test expect_get_5() fail {
-  let x = expect_get(fixture_get, "kkk")
+  let x = expect_get(fixture_bench, "kkk")
   x == x
 }
 
-test expect_get_6() {
-  expect_get(fixture_get, "jjj") == "10"
+test expect_get_bench() {
+  and {
+    expect_get(fixture_bench, "aaa") == "1",
+    expect_get(fixture_bench, "fff") == "6",
+    expect_get(fixture_bench, "kkk") == "11",
+  }
 }
 
 /// More efficient version of [`has_key`](#has_key), which fails if the key isn't present in the dict
@@ -408,9 +465,10 @@ test expect_has_key_4() {
   )
 }
 
-test expect_has_key_5() {
-  expect_has_key(fixture_get, "aaa")
-  expect_has_key(fixture_get, "jjj")
+test expect_has_key_bench() {
+  expect_has_key(fixture_bench, "aaa")
+  expect_has_key(fixture_bench, "fff")
+  expect_has_key(fixture_bench, "kkk")
 }
 
 // ## Inspecting
@@ -668,41 +726,36 @@ test get_or_else_3() {
   get_or_else(m, key: baz, or_else: fn() { "missing?" }) == "missing?"
 }
 
-const fixture_get =
-  empty
-    |> insert("aaa", "1")
-    |> insert("bbb", "2")
-    |> insert("ccc", "3")
-    |> insert("ddd", "4")
-    |> insert("eee", "5")
-    |> insert("fff", "6")
-    |> insert("ggg", "7")
-    |> insert("hhh", "8")
-    |> insert("iii", "9")
-    |> insert("jjj", "10")
-
 test get_4() {
-  get(fixture_get, "bcd") == None
+  get(fixture_bench, "bcd") == None
 }
 
 test get_or_else_4() {
-  get_or_else(fixture_get, "bcd", fn() { "0" }) == "0"
+  get_or_else(fixture_bench, "bcd", fn() { "0" }) == "0"
 }
 
 test get_5() {
-  get(fixture_get, "kkk") == None
+  get(fixture_bench, "kkk") == None
 }
 
 test get_or_else_5() {
-  get_or_else(fixture_get, "kkk", fn() { "" }) == ""
+  get_or_else(fixture_bench, "kkk", fn() { "" }) == ""
 }
 
-test get_6() {
-  get(fixture_get, "jjj") == Some("10")
+test get_bench() {
+  and {
+    get(fixture_bench, "aaa") == Some("1"),
+    get(fixture_bench, "fff") == Some("6"),
+    get(fixture_bench, "kkk") == Some("11"),
+  }
 }
 
-test get_or_else_6() {
-  get_or_else(fixture_get, "jjj", fn() { "" }) == "10"
+test get_or_else_bench() {
+  and {
+    get_or_else(fixture_bench, "aaa", fn() { "" }) == "1",
+    get_or_else(fixture_bench, "fff", fn() { "" }) == "6",
+    get_or_else(fixture_bench, "kkk", fn() { "" }) == "11",
+  }
 }
 
 /// Check if a key exists in the dictionary.
@@ -760,10 +813,11 @@ test has_key_4() {
   )
 }
 
-test has_key_5() {
+test has_key_bench() {
   and {
-    has_key(fixture_get, "jjj"),
-    has_key(fixture_get, "aaa"),
+    has_key(fixture_bench, "aaa"),
+    has_key(fixture_bench, "fff"),
+    has_key(fixture_bench, "kkk"),
   }
 }
 
@@ -962,37 +1016,14 @@ test delete_5() {
 }
 
 test delete_6() {
-  delete(fixture_get, "bcd") == fixture_get
+  delete(fixture_bench, "bcd") == fixture_bench
 }
 
-const fixture_delete_jjj =
-  empty
-    |> insert("aaa", "1")
-    |> insert("bbb", "2")
-    |> insert("ccc", "3")
-    |> insert("ddd", "4")
-    |> insert("eee", "5")
-    |> insert("fff", "6")
-    |> insert("ggg", "7")
-    |> insert("hhh", "8")
-    |> insert("iii", "9")
-
-const fixture_delete_aaa =
-  empty
-    |> insert("bbb", "2")
-    |> insert("ccc", "3")
-    |> insert("ddd", "4")
-    |> insert("eee", "5")
-    |> insert("fff", "6")
-    |> insert("ggg", "7")
-    |> insert("hhh", "8")
-    |> insert("iii", "9")
-    |> insert("jjj", "10")
-
-test delete_7() {
+test delete_bench() {
   and {
-    delete(fixture_get, "aaa") == fixture_delete_aaa,
-    delete(fixture_get, "jjj") == fixture_delete_jjj,
+    delete(fixture_bench, "aaa") == fixture_delete_aaa,
+    delete(fixture_bench, "fff") == fixture_delete_fff,
+    delete(fixture_bench, "kkk") == fixture_delete_kkk,
   }
 }
 
@@ -1461,13 +1492,14 @@ test pop_5() {
 }
 
 test pop_6() {
-  pop(fixture_get, "bcd") == (None, fixture_get)
+  pop(fixture_bench, "bcd") == (None, fixture_bench)
 }
 
-test pop_7() {
+test pop_bench() {
   and {
-    pop(fixture_get, "aaa") == (Some("1"), fixture_delete_aaa),
-    pop(fixture_get, "jjj") == (Some("10"), fixture_delete_jjj),
+    pop(fixture_bench, "aaa") == (Some("1"), fixture_delete_aaa),
+    pop(fixture_bench, "fff") == (Some("6"), fixture_delete_fff),
+    pop(fixture_bench, "kkk") == (Some("11"), fixture_delete_kkk),
   }
 }
 
@@ -1521,14 +1553,15 @@ test expect_delete_5() {
 }
 
 test expect_delete_6() fail {
-  let x = expect_delete(fixture_get, "bcd")
+  let x = expect_delete(fixture_bench, "bcd")
   x == x
 }
 
-test expect_delete_7() {
+test expect_delete_bench() {
   and {
-    expect_delete(fixture_get, "aaa") == fixture_delete_aaa,
-    expect_delete(fixture_get, "jjj") == fixture_delete_jjj,
+    expect_delete(fixture_bench, "aaa") == fixture_delete_aaa,
+    expect_delete(fixture_bench, "fff") == fixture_delete_fff,
+    expect_delete(fixture_bench, "kkk") == fixture_delete_kkk,
   }
 }
 
@@ -1589,14 +1622,15 @@ test expect_pop_5() {
 }
 
 test expect_pop_6() fail {
-  let x = expect_pop(fixture_get, "bcd")
+  let x = expect_pop(fixture_bench, "bcd")
   x == x
 }
 
-test expect_pop_7() {
+test expect_pop_bench() {
   and {
-    expect_pop(fixture_get, "aaa") == ("1", fixture_delete_aaa),
-    expect_pop(fixture_get, "jjj") == ("10", fixture_delete_jjj),
+    expect_pop(fixture_bench, "aaa") == ("1", fixture_delete_aaa),
+    expect_pop(fixture_bench, "fff") == ("6", fixture_delete_fff),
+    expect_pop(fixture_bench, "kkk") == ("11", fixture_delete_kkk),
   }
 }
 
@@ -1813,7 +1847,7 @@ fn do_foldl2(
 
 test foldl2_size_and_merge() {
   let size, merge <- foldl2(
-    fixture_get,
+    fixture_bench,
     0,
     "",
     fn(k, v, size, merge, return) {
@@ -1894,7 +1928,7 @@ fn do_foldr2(
 
 test foldr2_size_and_merge() {
   let size, merge <- foldr2(
-    fixture_get,
+    fixture_bench,
     0,
     "",
     fn(k, v, size, merge, return) {

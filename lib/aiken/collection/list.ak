@@ -2,6 +2,8 @@ use aiken/builtin
 use aiken/primitive/bytearray
 use aiken/primitive/int
 
+const fixture_bench = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
 // ## Constructing
 
 /// Add an element in front of the list. Sometimes useful when combined with
@@ -69,7 +71,8 @@ test repeat_2() {
 
 /// Determine if all elements of the list satisfy the given predicate.
 ///
-/// Note: an empty list always satisfies the predicate.
+/// > [!NOTE]
+/// > An empty list always satisfies the predicate.
 ///
 /// ```aiken
 /// list.all([], fn(n) { n > 0 }) == True
@@ -97,7 +100,8 @@ test all_3() {
 
 /// Determine if at least one element of the list satisfies the given predicate.
 ///
-/// Note: an empty list never satisfies the predicate.
+/// > [!NOTE]
+/// > An empty list never satisfies the predicate.
 ///
 /// ```aiken
 /// list.any([], fn(n) { n > 2 }) == False
@@ -122,6 +126,14 @@ test any_2() {
 
 test any_3() {
   any([], fn(n) { n == 42 }) == False
+}
+
+test any_bench() {
+  and {
+    any(fixture_bench, fn(n) { n == 0 }),
+    any(fixture_bench, fn(n) { n == 5 }),
+    any(fixture_bench, fn(n) { n == 10 }),
+  }
 }
 
 /// Return `Some(item)` at the index or None if the index is out of range. The index is 0-based.
@@ -166,8 +178,12 @@ test at_4() {
   at([1], 0) == Some(1)
 }
 
-test at_5() {
-  at([1, 2, 3], 2) == Some(3)
+test at_bench() {
+  and {
+    at(fixture_bench, 0) == Some(0),
+    at(fixture_bench, 6) == Some(6),
+    at(fixture_bench, 10) == Some(10),
+  }
 }
 
 /// Count how many items in the list satisfy the given predicate.
@@ -240,6 +256,14 @@ test find_3() {
 
 test find_4() {
   find([1, 2, 3], fn(x) { x >= 3 }) == Some(3)
+}
+
+test find_bench() {
+  and {
+    find(fixture_bench, fn(x) { x == 0 }) == Some(0),
+    find(fixture_bench, fn(x) { x == 6 }) == Some(6),
+    find(fixture_bench, fn(x) { x == 10 }) == Some(10),
+  }
 }
 
 /// Like [`find`](#find), but maps the found element to something else. This
@@ -341,6 +365,14 @@ test has_3() {
   has([], 14) == False
 }
 
+test has_bench() {
+  and {
+    has(fixture_bench, 0),
+    has(fixture_bench, 6),
+    has(fixture_bench, 10),
+  }
+}
+
 /// Get the first element of a list
 ///
 /// ```aiken
@@ -360,6 +392,10 @@ test head_1() {
 
 test head_2() {
   head([]) == None
+}
+
+test head_bench() {
+  head(fixture_bench) == Some(0)
 }
 
 /// Checks whether a list is empty.
@@ -388,7 +424,7 @@ test is_empty_2() {
 /// ```aiken
 /// list.index_of([1, 5, 2], 2) == Some(2)
 /// list.index_of([1, 7, 3], 4) == None
-/// list.index_of([1, 0, 9, 6], 6) == 3
+/// list.index_of([1, 0, 9, 6], 6) == Some(3)
 /// list.index_of([], 6) == None
 /// ```
 pub fn index_of(self: List<a>, elem: a) -> Option<Int> {
@@ -423,6 +459,14 @@ test index_of_4() {
   index_of([], 6) == None
 }
 
+test index_of_bench() {
+  and {
+    index_of(fixture_bench, 0) == Some(0),
+    index_of(fixture_bench, 6) == Some(6),
+    index_of(fixture_bench, 10) == Some(10),
+  }
+}
+
 /// Get the last in the given list, if any.
 ///
 /// ```aiken
@@ -445,8 +489,8 @@ test last_2() {
   last([1]) == Some(1)
 }
 
-test last_3() {
-  last([1, 2, 3, 4]) == Some(4)
+test last_bench() {
+  last(fixture_bench) == Some(10)
 }
 
 /// Get the number of elements in the given list.
@@ -473,6 +517,16 @@ test length_2() {
 // ## Inspecting Forcibly
 
 /// More efficient version of [`any`](#any), but fails if no element satisfies the predicate.
+///
+/// > [!NOTE]
+/// > An empty list always satisfies the predicate.
+///
+/// ```aiken
+/// list.any([], fn(n) { n > 2 }) → 💥
+/// list.any([1, 2, 3], fn(n) { n > 0 }) == True
+/// list.any([1, 2, 3], fn(n) { n == 2 }) == True
+/// list.any([1, 2, 3], fn(n) { n < 0 }) → 💥
+/// ```
 pub fn expect_any(self: List<a>, predicate: fn(a) -> Bool) -> Void {
   if predicate(builtin.head_list(self)) {
     Void
@@ -493,7 +547,19 @@ test expect_any_3() fail {
   expect_any([], fn(n) { n == 42 })
 }
 
-/// More efficient version of `at`, but fails if there's no element at the given index (or if the index is out of bound).
+test expect_any_bench() {
+  expect_any(fixture_bench, fn(n) { n == 0 })
+  expect_any(fixture_bench, fn(n) { n == 5 })
+  expect_any(fixture_bench, fn(n) { n == 10 })
+}
+
+/// More efficient version of [`at`](#at), but fails if there's no element at the
+/// given index (or if the index is out of bound).
+///
+/// ```aiken
+/// list.expect_at([1, 2, 3], 1) == 2
+/// list.expect_at([1, 2, 3], 42) → 💥
+/// ```
 pub fn expect_at(self: List<a>, index: Int) -> a {
   if index >= 2 {
     expect_at(builtin.tail_list(builtin.tail_list(self)), index - 2)
@@ -529,11 +595,20 @@ test expect_at_4() {
   expect_at([1], 0) == 1
 }
 
-test expect_at_5() {
-  expect_at([1, 2, 3], 2) == 3
+test expect_at_bench() {
+  and {
+    expect_at(fixture_bench, 0) == 0,
+    expect_at(fixture_bench, 6) == 6,
+    expect_at(fixture_bench, 10) == 10,
+  }
 }
 
 /// More efficient version of [`find`](#find), but fails if the element is not found.
+///
+/// ```aiken
+/// list.expect_find([1, 2, 3], fn(x) { x == 2 }) == 2
+/// list.expect_find([4, 5, 6], fn(x) { x == 2 }) → 💥
+/// ```
 pub fn expect_find(self: List<a>, predicate: fn(a) -> Bool) -> a {
   let elem = builtin.head_list(self)
   if predicate(elem) {
@@ -559,6 +634,14 @@ test expect_find_3() fail {
 
 test expect_find_4() {
   expect_find([1, 2, 3], fn(x) { x >= 3 }) == 3
+}
+
+test expect_find_bench() {
+  and {
+    expect_find(fixture_bench, fn(x) { x == 0 }) == 0,
+    expect_find(fixture_bench, fn(x) { x == 6 }) == 6,
+    expect_find(fixture_bench, fn(x) { x == 10 }) == 10,
+  }
 }
 
 /// More efficient version of [`find_map`](#find_map) but fails if no element
@@ -632,6 +715,12 @@ test expect_find_map_4() fail {
 }
 
 /// More efficient version of [`has`](#has) but fails if the element is missing.
+///
+/// ```aiken
+/// list.expect_has([1, 2, 3], 2) → ✅
+/// list.expect_has([1, 2, 3], 14) → 💥
+/// list.expect_has([], 14) → 💥
+/// ```
 pub fn expect_has(self: List<a>, elem: a) -> Void {
   expect do_expect_has(self, elem)
 }
@@ -655,13 +744,35 @@ test expect_has_3() fail {
   expect_has([], 14)
 }
 
+test expect_has_bench() {
+  expect_has(fixture_bench, 0)
+  expect_has(fixture_bench, 6)
+  expect_has(fixture_bench, 10)
+}
+
 /// More efficient version of [`head`](#head), but fails if the list is empty.
+///
+/// ```aiken
+/// list.expect_head([1, 2, 3]) == 1
+/// list.expect_head([]) → 💥
+/// ```
 pub fn expect_head(self: List<a>) -> a {
   builtin.head_list(self)
 }
 
+test expect_head_bench() {
+  expect_head(fixture_bench) == 0
+}
+
 /// More efficient version of [`index_of`](#index_of), but fails if the element
 /// is not in the list.
+///
+/// ```aiken
+/// list.expect_index_of([1, 5, 2], 2) == 2
+/// list.expect_index_of([1, 7, 3], 4) → 💥
+/// list.expect_index_of([1, 0, 9, 6], 6) == 3
+/// list.expect_index_of([], 6) → 💥
+/// ```
 pub fn expect_index_of(self: List<a>, elem: a) -> Int {
   if builtin.head_list(self) == elem {
     0
@@ -688,11 +799,20 @@ test expect_index_of_4() fail {
   i == i
 }
 
-test expect_index_of_5() {
-  expect_index_of([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == 9
+test expect_index_of_bench() {
+  and {
+    expect_index_of(fixture_bench, 0) == 0,
+    expect_index_of(fixture_bench, 6) == 6,
+    expect_index_of(fixture_bench, 10) == 10,
+  }
 }
 
 /// More efficient version of [`last`](#last), but fails when the list is empty.
+///
+/// ```aiken
+/// list.expect_last([1, 2, 3]) == 3
+/// list.expect_last([]) → 💥
+/// ```
 pub fn expect_last(self: List<a>) -> a {
   let tail = builtin.tail_list(self)
   when tail is {
@@ -710,8 +830,8 @@ test expect_last_2() {
   expect_last([1]) == 1
 }
 
-test expect_last_3() {
-  expect_last([1, 2, 3, 4]) == 4
+test expect_last_bench() {
+  expect_last(fixture_bench) == 10
 }
 
 // ## Modifying
@@ -752,8 +872,12 @@ test delete_4() {
   delete([2], 2) == []
 }
 
-test delete_5() {
-  delete([1, 2, 3, 1, 4], 4) == [1, 2, 3, 1]
+test delete_bench() {
+  and {
+    delete(fixture_bench, 0) == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    delete(fixture_bench, 6) == [0, 1, 2, 3, 4, 5, 7, 8, 9, 10],
+    delete(fixture_bench, 10) == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  }
 }
 
 /// Drop the first `n` elements of a list.
@@ -787,15 +911,19 @@ test drop_2() {
 }
 
 test drop_3() {
-  drop([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == []
-}
-
-test drop_4() {
   drop([1, 2, 3, 4, 5], 3) == [4, 5]
 }
 
-test drop_5() {
+test drop_4() {
   drop([1, 2, 3], -1) == [1, 2, 3]
+}
+
+test drop_bench() {
+  and {
+    drop(fixture_bench, 0) == fixture_bench,
+    drop(fixture_bench, 6) == [6, 7, 8, 9, 10],
+    drop(fixture_bench, 11) == [],
+  }
 }
 
 /// Returns the suffix of the given list after removing all elements that satisfy the predicate.
@@ -1154,6 +1282,14 @@ test take_5() {
   take([1, 2, 3, 4], -2) == []
 }
 
+test take_bench() {
+  and {
+    take(fixture_bench, 0) == [],
+    take(fixture_bench, 5) == [0, 1, 2, 3, 4],
+    take(fixture_bench, 11) == fixture_bench,
+  }
+}
+
 /// Returns the longest prefix of the given list where all elements satisfy the predicate.
 ///
 /// ```aiken
@@ -1215,6 +1351,11 @@ test unique_2() {
 // ### Extracting Forcibly
 
 /// More efficient version of [`delete`](#delete), which also fails when the element is NOT in the list.
+///
+/// ```aiken
+/// list.expect_delete([1, 2, 3, 1], 1) == [2, 3, 1]
+/// list.expect_delete([1, 2, 3], 14) → 💥
+/// ```
 pub fn expect_delete(self: List<a>, elem: a) -> List<a> {
   let head = builtin.head_list(self)
   if head == elem {
@@ -1242,8 +1383,12 @@ test expect_delete_4() {
   expect_delete([2], 2) == []
 }
 
-test expect_delete_5() {
-  expect_delete([1, 2, 3, 1, 4], 4) == [1, 2, 3, 1]
+test expect_delete_bench() {
+  and {
+    expect_delete(fixture_bench, 0) == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    expect_delete(fixture_bench, 6) == [0, 1, 2, 3, 4, 5, 7, 8, 9, 10],
+    expect_delete(fixture_bench, 10) == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+  }
 }
 
 /// More efficient version of [`drop`](#drop), which fails when there's less than `n` elements in the list.
@@ -1275,15 +1420,19 @@ test expect_drop_2() {
 }
 
 test expect_drop_3() {
-  expect_drop([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 10) == []
-}
-
-test expect_drop_4() {
   expect_drop([1, 2, 3, 4, 5], 3) == [4, 5]
 }
 
-test expect_drop_5() {
+test expect_drop_4() {
   expect_drop([1, 2, 3], -1) == [1, 2, 3]
+}
+
+test expect_drop_bench() {
+  and {
+    expect_drop(fixture_bench, 0) == fixture_bench,
+    expect_drop(fixture_bench, 6) == [6, 7, 8, 9, 10],
+    expect_drop(fixture_bench, 11) == [],
+  }
 }
 
 /// More efficient version of [`init`](#init), which fails when the list is empty.
@@ -1362,6 +1511,14 @@ test expect_take_4() {
 
 test expect_take_5() {
   expect_take([1, 2, 3, 4], -2) == []
+}
+
+test expect_take_bench() {
+  and {
+    expect_take(fixture_bench, 0) == [],
+    expect_take(fixture_bench, 5) == [0, 1, 2, 3, 4],
+    expect_take(fixture_bench, 11) == fixture_bench,
+  }
 }
 
 // ### Mapping
@@ -1462,7 +1619,8 @@ test map_2() {
 
 /// Apply a function of two arguments, combining elements from two lists.
 ///
-/// Note: if one list is longer, the extra elements are dropped.
+/// > [!NOTE]
+/// > If one list is longer, the extra elements are dropped.
 ///
 /// ```aiken
 /// list.map2([1, 2, 3], [1, 2], fn(a, b) { a + b }) == [2, 4]
@@ -1496,7 +1654,8 @@ test map2_3() {
 
 /// Apply a function of three arguments, combining elements from three lists.
 ///
-/// Note: if one list is longer, the extra elements are dropped.
+/// > [!NOTE]
+/// > If one list is longer, the extra elements are dropped.
 ///
 /// ```aiken
 /// list.map3([1, 2, 3], [1, 2], [1, 2, 3], fn(a, b, c) { a + b + c }) == [3, 6]
@@ -1549,10 +1708,10 @@ test reverse_2() {
 /// Sort a list in ascending order using the given comparison function.
 ///
 /// ```aiken
-/// use aiken/int
+/// use aiken/primitive/int
 ///
-/// sort([3, 1, 4, 0, 2], int.compare) == [0, 1, 2, 3, 4]
-/// sort([1, 2, 3], int.compare) == [1, 2, 3]
+/// list.sort([3, 1, 4, 0, 2], int.compare) == [0, 1, 2, 3, 4]
+/// list.sort([1, 2, 3], int.compare) == [1, 2, 3]
 /// ```
 pub fn sort(self: List<a>, compare: fn(a, a) -> Ordering) -> List<a> {
   when self is {
@@ -1675,7 +1834,8 @@ test difference_4() {
 
 /// Combine two lists together.
 ///
-/// Note: if one list is longer, the extra elements are dropped.
+/// > [!NOTE]
+/// > If one list is longer, the extra elements are dropped.
 ///
 /// ```aiken
 /// list.zip([1, 2], ["a", "b", "c"]) == [(1, "a"), (2, "b")]
@@ -1870,7 +2030,7 @@ test foldr_3() {
 ///
 /// ```aiken
 /// let len, sum <-
-///    foldr2(
+///    list.foldr2(
 ///      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
 ///      0,
 ///      0,

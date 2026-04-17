@@ -18,7 +18,7 @@ pub type Byte =
 /// bytearray.from_int_big_endian(1_000_000, 3) == #"0f4240"
 /// bytearray.from_int_big_endian(1_000_000, 5) == #"00000f4240"
 /// bytearray.from_int_big_endian(0, 8) == #"0000000000000000"
-/// bytearray.from_int_big_endian(1_000_000, 1) => 💥
+/// bytearray.from_int_big_endian(1_000_000, 1) → 💥
 /// ```
 pub fn from_int_big_endian(self: Int, size: Int) -> ByteArray {
   builtin.integer_to_bytearray(True, size, self)
@@ -51,7 +51,7 @@ test from_int_big_endian_4() fail {
 /// bytearray.from_int_little_endian(1_000_000, 3) == #"40420f"
 /// bytearray.from_int_little_endian(1_000_000, 5) == #"40420f0000"
 /// bytearray.from_int_little_endian(0, 8) == #"0000000000000000"
-/// bytearray.from_int_little_endian(1_000_000, 1) => 💥
+/// bytearray.from_int_little_endian(1_000_000, 1) → 💥
 /// ```
 pub fn from_int_little_endian(self: Int, size: Int) -> ByteArray {
   builtin.integer_to_bytearray(False, size, self)
@@ -122,7 +122,7 @@ test push_3() fail {
 /// Get the `Byte` at the given index, or crash.
 ///
 /// > [!WARNING]
-/// > This functions fails (i.e. halts the program) if there's no byte at the given index.
+/// > This function fails (i.e. halts the program) if there's no byte at the given index.
 pub fn at(self: ByteArray, index: Int) -> Byte {
   builtin.index_bytearray(self, index)
 }
@@ -588,13 +588,13 @@ test to_int_little_endian_3() {
 /// Convert a `ByteArray` into a `String`.
 ///
 /// > [!WARNING]
-/// > This functions fails (i.e. halts the program) if the underlying `ByteArray` isn't UTF-8-encoded. In particular, you cannot convert arbitrary hash digests using this function.
+/// > This function fails (i.e. halts the program) if the underlying `ByteArray` isn't UTF-8-encoded. In particular, you cannot convert arbitrary hash digests using this function.
 /// >
 /// > For converting arbitrary `ByteArray`s, use [bytearray.to_hex](#to_hex).
 ///
 /// ```aiken
 /// bytearray.to_string(#"414243") == "ABC"
-/// bytearray.to_string(some_hash) => 💥
+/// bytearray.to_string(some_hash) → 💥
 /// ```
 pub fn to_string(self: ByteArray) -> String {
   builtin.decode_utf8(self)

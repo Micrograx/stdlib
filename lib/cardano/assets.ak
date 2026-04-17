@@ -1147,7 +1147,7 @@ pub fn flatten(self: Value) -> List<(PolicyId, AssetName, Int)> {
 /// Flatten a `Value` as a list of results, possibly discarding some along the way. In particular, we have:
 ///
 /// ```aiken
-/// flatten(value) === flatten_with(value, strategy.triple())
+/// flatten(value) == flatten_with(value, strategy.triple())
 /// ```
 pub fn flatten_with(self: Value, with: FlattenStrategy<result>) -> List<result> {
   dict.foldr(
@@ -1200,7 +1200,7 @@ test flatten_with_2() {
 ///  |> assets.add("a", "1", 10)
 ///  |> assets.add("b", "2", 20)
 ///  |> assets.reduce(v, 0, fn(_, _, quantity, acc) { acc + quantity })
-/// // 30
+///  // 30
 /// ```
 pub fn reduce(
   self: Value,

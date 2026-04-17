@@ -7,14 +7,14 @@ use aiken/builtin.{
 /// Convert a `ByteArray` into a `String`
 ///
 /// > [!WARNING]
-/// > This functions fails if the underlying `ByteArray` isn't UTF-8-encoded. In particular, you cannot convert arbitrary hash digests using this function.
+/// > This function fails if the underlying `ByteArray` isn't UTF-8-encoded. In particular, you cannot convert arbitrary hash digests using this function.
 /// >
 /// > For converting arbitrary `ByteArray`s, use [bytearray.to_hex](./bytearray.html#to_hex).
 ///
 /// ```aiken
 /// string.from_bytearray("foo") == @"foo"
 /// string.from_bytearray(#"666f6f") == @"foo"
-/// string.from_bytearray(some_hash) -> fail
+/// string.from_bytearray(some_hash) -> 💥
 /// ```
 pub fn from_bytearray(bytes: ByteArray) -> String {
   decode_utf8(bytes)

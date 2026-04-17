@@ -267,7 +267,7 @@ test map3_3() {
 /// ```aiken
 /// option.or_try(None, fn(_) { Some("aiken") }) == Some("aiken")
 /// option.or_try(Some(42), fn(_) { Some(14) }) == Some(42)
-/// option.or_try(None, fn (_) { fail }) => 💥
+/// option.or_try(None, fn (_) { fail }) → 💥
 /// ```
 pub fn or_try(self: Option<a>, compute_default: fn() -> Option<a>) -> Option<a> {
   when self is {
