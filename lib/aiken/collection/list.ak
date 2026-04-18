@@ -696,7 +696,7 @@ test expect_find_map_2() {
 }
 
 test expect_find_map_3() fail {
-  let x = expect_find_map(
+  expect_find_map(
     [1, 2, 3],
     fn(x, keep, discard) {
       if x > 42 {
@@ -706,12 +706,11 @@ test expect_find_map_3() fail {
       }
     },
   )
-  x == x
+    |> tautology
 }
 
 test expect_find_map_4() fail {
-  let x = expect_find_map([], fn(_, keep, _) { keep(14) })
-  x == x
+  expect_find_map([], fn(_, keep, _) { keep(14) }) |> tautology
 }
 
 /// More efficient version of [`has`](#has) but fails if the element is missing.
@@ -822,8 +821,7 @@ pub fn expect_last(self: List<a>) -> a {
 }
 
 test expect_last_1() fail {
-  let x = expect_last([])
-  x == x
+  expect_last([]) |> tautology
 }
 
 test expect_last_2() {
@@ -1366,8 +1364,7 @@ pub fn expect_delete(self: List<a>, elem: a) -> List<a> {
 }
 
 test expect_delete_1() fail {
-  let x = expect_delete([], 42)
-  x == x
+  expect_delete([], 42) |> tautology
 }
 
 test expect_delete_2() {
@@ -1375,8 +1372,7 @@ test expect_delete_2() {
 }
 
 test expect_delete_3() fail {
-  let x = expect_delete([1, 2, 3], 14)
-  x == x
+  expect_delete([1, 2, 3], 14) |> tautology
 }
 
 test expect_delete_4() {
@@ -1411,8 +1407,7 @@ test expect_drop_0() {
 }
 
 test expect_drop_1() fail {
-  let x = expect_drop([], 42)
-  x == x
+  expect_drop([], 42) |> tautology
 }
 
 test expect_drop_2() {
@@ -1444,8 +1439,7 @@ pub fn expect_init(self: List<a>) -> List<a> {
 }
 
 test expect_init_1() fail {
-  let x = expect_init([])
-  x == x
+  expect_init([]) |> tautology
 }
 
 test expect_init_2() {
@@ -1466,8 +1460,7 @@ test expect_tail_1() {
 }
 
 test expect_tail_2() fail {
-  let x = expect_tail([])
-  x == x
+  expect_tail([]) |> tautology
 }
 
 /// More efficient version of [`take`](#take), which fails when the list contains less element than wanted.
@@ -1491,8 +1484,7 @@ pub fn expect_take(self: List<a>, n: Int) -> List<a> {
 }
 
 test expect_take_1() fail {
-  let x = expect_take([], 42)
-  x == x
+  expect_take([], 42) |> tautology
 }
 
 test expect_take_2() {
@@ -2147,4 +2139,8 @@ test reduce_4() {
     #[9],
     fn(left, right) { bytearray.concat(left, right) },
   ) == #[9, 1, 2, 3]
+}
+
+fn tautology(a: a) -> Bool {
+  a == a
 }

@@ -1,7 +1,8 @@
 use aiken/builtin
-use aiken/collection/dict.{Dict, from_ascending_pairs_with}
+use aiken/collection/dict.{Dict}
 use aiken/collection/dict/strategy as dict_strategy
 use aiken/collection/list
+use aiken/collection/pairs
 use aiken/crypto.{Blake2b_224, Hash, Script}
 use cardano/assets/strategy.{FlattenStrategy}
 
@@ -48,12 +49,107 @@ pub fn from_asset(
   asset_name: AssetName,
   quantity: Int,
 ) -> Value {
-  if quantity == 0 {
+  if 0 == quantity {
     zero
   } else {
     dict.singleton(policy_id, dict.singleton(asset_name, quantity))
       |> Value
   }
+}
+
+pub fn from_ascending_pairs(xs: Pairs<PolicyId, Dict<AssetName, Int>>) -> Value {
+  xs
+    |> dict.from_ascending_pairs_with(
+        fn(inner) {
+          and {
+            dict.empty != inner,
+            dict.foldl(
+              inner,
+              True,
+              fn(_, quantity, is_non_zero) { is_non_zero && 0 != quantity },
+            ),
+          }
+        },
+      )
+    |> Value
+}
+
+test from_ascending_pairs_1() {
+  let v = from_ascending_pairs([])
+  v == zero
+}
+
+test from_ascending_pairs_2() fail {
+  from_ascending_pairs([Pair(#"33", dict.empty)])
+    |> tautology
+}
+
+test from_ascending_pairs_3() fail {
+  from_ascending_pairs([Pair(#"33", dict.singleton("", 0))])
+    |> tautology
+}
+
+test from_ascending_pairs_4() {
+  let v = from_ascending_pairs([Pair(#"33", dict.singleton(#"", 1))])
+  flatten(v) == [(#"33", #"", 1)]
+}
+
+test from_ascending_pairs_5() {
+  let v = from_ascending_pairs(
+    [Pair(#"33", dict.from_ascending_pairs([Pair(#"", 1), Pair(#"33", 1)]))],
+  )
+  flatten(v) == [(#"33", #"", 1), (#"33", #"33", 1)]
+}
+
+test from_ascending_pairs_6() fail {
+  from_ascending_pairs(
+    [
+      Pair(#"33", dict.from_ascending_pairs([Pair(#"", 1), Pair(#"33", 1)])),
+      Pair(#"33", dict.from_ascending_pairs([Pair(#"", 1), Pair(#"33", 1)])),
+    ],
+  )
+    |> tautology
+}
+
+test from_ascending_pairs_7() fail {
+  from_ascending_pairs(
+    [
+      Pair(#"33", dict.from_ascending_pairs([Pair(#"", 1), Pair(#"33", 1)])),
+      Pair(#"34", dict.from_ascending_pairs([Pair(#"", 1), Pair(#"", 1)])),
+    ],
+  )
+    |> tautology
+}
+
+test from_ascending_pairs_8() {
+  let v = from_ascending_pairs(
+    [
+      Pair(#"33", dict.from_ascending_pairs([Pair(#"", 1), Pair(#"33", 1)])),
+      Pair(#"34", dict.singleton(#"31", 1)),
+      Pair(#"35", dict.singleton("", 1)),
+    ],
+  )
+  flatten(v) == [
+    (#"33", #"", 1), (#"33", #"33", 1), (#"34", #"31", 1), (#"35", #"", 1),
+  ]
+}
+
+test from_ascending_pairs_9() fail {
+  from_ascending_pairs(
+    [
+      Pair(#"35", dict.singleton("", 1)),
+      Pair(#"33", dict.from_ascending_pairs([Pair(#"", 1), Pair(#"33", 1)])),
+      Pair(#"34", dict.singleton(#"31", 1)),
+    ],
+  )
+    |> tautology
+}
+
+test from_ascending_pairs_10() fail {
+  from_ascending_pairs(
+    [Pair(#"", dict.singleton("", 1)), Pair(#"", dict.singleton("", -1))],
+  )
+    |> tautology
 }
 
 /// Promote an arbitrary list of assets into a `Value`. This function fails
@@ -73,7 +169,7 @@ pub fn from_asset_list(xs: Pairs<PolicyId, Pairs<AssetName, Int>>) -> Value {
         fn(inner, acc) {
           expect Pair(p, [_, ..] as x) = inner
           x
-            |> from_ascending_pairs_with(fn(v) { v != 0 })
+            |> dict.from_ascending_pairs_with(fn(v) { 0 != v })
             |> dict.insert_with(acc, p, _, dict_strategy.expect_no_duplicate())
         },
       )
@@ -86,13 +182,11 @@ test from_asset_list_1() {
 }
 
 test from_asset_list_2() fail {
-  let v = from_asset_list([Pair(#"33", [])])
-  v == zero
+  from_asset_list([Pair(#"33", [])]) |> tautology
 }
 
 test from_asset_list_3() fail {
-  let v = from_asset_list([Pair(#"33", [Pair(#"", 0)])])
-  v != zero
+  from_asset_list([Pair(#"33", [Pair(#"", 0)])]) |> tautology
 }
 
 test from_asset_list_4() {
@@ -106,23 +200,23 @@ test from_asset_list_5() {
 }
 
 test from_asset_list_6() fail {
-  let v = from_asset_list(
+  from_asset_list(
     [
       Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
       Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
     ],
   )
-  v != zero
+    |> tautology
 }
 
 test from_asset_list_7() fail {
-  let v = from_asset_list(
+  from_asset_list(
     [
       Pair(#"33", [Pair(#"", 1), Pair(#"33", 1)]),
       Pair(#"34", [Pair(#"", 1), Pair(#"", 1)]),
     ],
   )
-  v != zero
+    |> tautology
 }
 
 test from_asset_list_8() {
@@ -149,6 +243,15 @@ test from_asset_list_9() {
   ]
 }
 
+test from_asset_list_10() fail {
+  from_asset_list([Pair(#"", [Pair(#"", 1)]), Pair(#"", [Pair(#"", -1)])])
+    |> tautology
+}
+
+test from_asset_list_11() fail {
+  from_asset_list([Pair(#"", [Pair(#"", 1), Pair(#"", -1)])]) |> tautology
+}
+
 /// Construct a `Value` from a lovelace quantity.
 ///
 /// Friendly reminder: 1 Ada = 1.000.000 Lovelace
@@ -160,6 +263,37 @@ pub fn from_lovelace(quantity: Int) -> Value {
 pub const zero: Value = Value { inner: dict.empty }
 
 // ## Inspecting
+
+/// Check whether some tokens list is contained within another. This is a
+/// specialised version of [`dict.{contains}`](../aiken/collection/dict.html#contains).
+pub fn contains(
+  self: Dict<AssetName, Int>,
+  subset: Dict<AssetName, Int>,
+) -> Bool {
+  do_contains(dict.to_pairs(self), dict.to_pairs(subset))
+}
+
+fn do_contains(
+  self: Pairs<AssetName, Int>,
+  subset: Pairs<AssetName, Int>,
+) -> Bool {
+  when subset is {
+    [] -> True
+    [head_subset, ..tail_subset] -> {
+      let head_superset, tail_superset <- pairs.pop_until_key_and_then(
+        self,
+        head_subset.1st,
+      )
+      and {
+        when head_superset is {
+          None -> False
+          Some(head_superset) -> head_superset >= head_subset.2nd
+        },
+        do_contains(tail_superset, tail_subset),
+      }
+    }
+  }
+}
 
 /// Check whether a `Value` carries any NFT from the given policy. Other assets are tolerated.
 ///
@@ -174,7 +308,7 @@ pub const zero: Value = Value { inner: dict.empty }
 /// ```
 pub fn has_any_nft(self: Value, policy: PolicyId) -> Bool {
   tokens(self, policy)
-    |> dict.foldr(False, fn(_, quantity, result) { result || quantity == 1 })
+    |> dict.foldr(False, fn(_, quantity, result) { result || 1 == quantity })
 }
 
 /// Check whether a `Value` carries any NFT from the given policy. Other assets (other than
@@ -210,7 +344,7 @@ pub fn has_any_nft(self: Value, policy: PolicyId) -> Bool {
 pub fn has_any_nft_strict(self: Value, policy: PolicyId) -> Bool {
   let check_inner = fn(p, inner) {
     and {
-      p == policy,
+      policy == p,
       when inner |> dict.to_pairs is {
         [Pair(_, 1)] -> True
         _ -> False
@@ -253,7 +387,7 @@ pub fn has_any_nft_strict(self: Value, policy: PolicyId) -> Bool {
 /// assets.has_nft(value, "bar", "asset#2") == False
 /// ```
 pub fn has_nft(self: Value, policy: PolicyId, asset_name: AssetName) -> Bool {
-  quantity_of(self, policy, asset_name) == 1
+  1 == quantity_of(self, policy, asset_name)
 }
 
 /// Check whether a `Value` carries a specific NFT. Other assets (other than
@@ -464,7 +598,7 @@ test has_nft_with_fixture_3_without_lovelace() {
 
 /// Check is a `Value` is zero. That is, it has no assets and holds no Ada/Lovelace.
 pub fn is_zero(self: Value) -> Bool {
-  self == zero
+  zero == self
 }
 
 /// Efficiently compare two values together, allowing a custom behaviour for Ada/Lovelace.
@@ -494,6 +628,8 @@ pub fn is_zero(self: Value) -> Bool {
 /// True == assets.match(value, datum, fn(value_lovelace, datum_lovelace) {
 ///   2 * datum_lovelace >= value_lovelace
 /// })
+///
+/// False == assets.match(assets.zero, datum, fn(_, _) { True })
 /// ```
 pub fn match(
   left: Value,
@@ -503,34 +639,7 @@ pub fn match(
   builtin.choose_data(
     right,
     False,
-    {
-      let (left_lovelace, left_assets) = dict.pop(left.inner, ada_policy_id)
-      let left_assets: Data = left_assets
-      let left_lovelace = when left_lovelace is {
-        Some(tokens) -> builtin.head_list(dict.to_pairs(tokens)).2nd
-        None -> 0
-      }
-      when builtin.un_map_data(right) is {
-        [] -> left_assets == right && assert_lovelace(left_lovelace, 0)
-        [first_asset, ..right_assets] ->
-          if first_asset.1st == builtin.b_data(ada_policy_id) {
-            and {
-              assert_lovelace(
-                left_lovelace,
-                builtin.un_i_data(
-                  builtin.head_list(builtin.un_map_data(first_asset.2nd)).2nd,
-                ),
-              ),
-              left_assets == builtin.map_data(right_assets),
-            }
-          } else {
-            and {
-              assert_lovelace(left_lovelace, 0),
-              left_assets == right,
-            }
-          }
-      }
-    },
+    expect_match(left, right, assert_lovelace),
     False,
     False,
     False,
@@ -788,19 +897,137 @@ const fixture_match_benchmark_left: Value =
 
 const fixture_match_benchmark_right: Data = fixture_match_benchmark_left
 
-test match_benchmark() {
+test match_bench() {
   match(fixture_match_benchmark_left, fixture_match_benchmark_right, ==)
 }
 
-test match_benchmark_vs() {
+test expect_match_bench() {
+  expect_match(fixture_match_benchmark_left, fixture_match_benchmark_right, ==)
+}
+
+test match_assets_bench() {
+  match_assets(fixture_match_benchmark_left, fixture_match_benchmark_right)
+}
+
+test expect_match_assets_bench() {
+  expect_match_assets(
+    fixture_match_benchmark_left,
+    fixture_match_benchmark_right,
+  )
+}
+
+test naive_match_bench() {
   let data: Data = fixture_match_benchmark_right
   expect pairs: Pairs<PolicyId, Pairs<AssetName, Int>> = data
   fixture_match_benchmark_left == from_asset_list(pairs)
 }
 
+/// A version of [`match`](#match) which simply ignores lovelace in either operands.
+///
+/// ```aiken
+/// const value: Value =
+///   assets.from_lovelace(30)
+///     |> assets.add("foo", "bar", 1)
+///     |> assets.add("foo", "baz", 42)
+///
+/// const datum: Data =
+///   assets.from_lovelace(20)
+///     |> assets.add("foo", "bar", 1)
+///     |> assets.add("foo", "baz", 42)
+///
+/// True == assets.match(value, datum)
+///
+/// False == assets.match(assets.zero, datum)
+/// ```
+pub fn match_assets(left: Value, right: Data) -> Bool {
+  builtin.choose_data(
+    right,
+    False,
+    expect_match_assets(left, right),
+    False,
+    False,
+    False,
+  )
+}
+
+test match_assets_1() {
+  match_assets(fixture_match_value, fixture_match_data)
+}
+
+test match_assets_2() {
+  !match_assets(fixture_match_value, fixture_match_data_missing_foo_02)
+}
+
+test match_assets_3() {
+  !match_assets(fixture_match_value, fixture_match_data_missing_bar)
+}
+
+test match_assets_4() {
+  !match_assets(fixture_match_value, fixture_match_data_altered_foo_01)
+}
+
+test match_assets_5() {
+  !match_assets(fixture_match_value, fixture_match_data_extra_policy)
+}
+
+test match_assets_6() {
+  !match_assets(fixture_match_value, fixture_match_data_extra_asset)
+}
+
+test match_assets_7() {
+  !match_assets(fixture_match_value, fixture_match_data_no_assets)
+}
+
+test match_assets_8() {
+  match_assets(zero, zero)
+}
+
+test match_assets_9() {
+  match_assets(
+    without_lovelace(fixture_match_value),
+    without_lovelace(fixture_match_value),
+  )
+}
+
+test match_assets_10() {
+  match_assets(without_lovelace(fixture_match_value), fixture_match_value)
+}
+
+test match_assets_11() {
+  match_assets(fixture_match_value, without_lovelace(fixture_match_value))
+}
+
+test match_assets_12() {
+  match_assets(zero |> add(ada_policy_id, ada_asset_name, 42), zero)
+}
+
+test match_assets_13() {
+  match_assets(zero, zero |> add(ada_policy_id, ada_asset_name, 42))
+}
+
 /// A specialized version of `quantity_of` for the Ada currency.
 pub fn lovelace_of(self: Value) -> Int {
   quantity_of(self, ada_policy_id, ada_asset_name)
+}
+
+const fixture_lovelace_of_1: Value =
+  zero
+    |> add("", "", 42)
+
+const fixture_lovelace_of_2: Value =
+  zero
+    |> add("foo", "bar", 42)
+
+test lovelace_of_0() {
+  lovelace_of(zero) == 0
+}
+
+test lovelace_of_1() {
+  lovelace_of(fixture_lovelace_of_1) == 42
+}
+
+test lovelace_of_2() {
+  lovelace_of(fixture_lovelace_of_2) == 0
 }
 
 /// A list of all token policies in that Value with non-zero tokens.
@@ -824,220 +1051,105 @@ pub fn tokens(self: Value, policy_id: PolicyId) -> Dict<AssetName, Int> {
     |> dict.get_or_else(policy_id, fn() { dict.empty })
 }
 
-// ## Combining
+// # Inspecting Forcibly
 
-/// Add a (positive or negative) quantity of a single token to a assets.
-/// This is more efficient than [`merge`](#merge) for a single asset.
-pub fn add(
+/// More efficient version of [`lovelace_of`](#lovelace_of), but fails when
+/// there's no lovelace quantity in the [`Value`](#Value).
+///
+/// > [!TIP]
+/// > It's worth noting that:
+/// >
+/// > - There's **always** some lovelace in values from **inputs** or **outputs**.
+/// > - There's **never** any lovelace in values from **mint**.
+pub fn expect_lovelace_of(self: Value) -> Int {
+  expect Pair("", lovelaces) = self
+    |> to_dict
+    |> dict.to_pairs
+    |> builtin.head_list
+  lovelaces
+    |> dict.to_pairs
+    |> builtin.head_list
+    |> builtin.snd_pair
+}
+
+test expect_lovelace_of_0() fail {
+  expect_lovelace_of(zero) |> tautology
+}
+
+test expect_lovelace_of_1() {
+  expect_lovelace_of(fixture_lovelace_of_1) == 42
+}
+
+test expect_lovelace_of_2() fail {
+  expect_lovelace_of(fixture_lovelace_of_2) |> tautology
+}
+
+/// A slightly more efficient version of [`match`](#match) which fails if the
+/// provided `Data` is not akin to a [`Value`](#Value).
+pub fn expect_match(
+  left: Value,
+  right: Data,
+  assert_lovelace: fn(Lovelace, Lovelace) -> Bool,
+) -> Bool {
+  let (left_lovelace, left_assets) = dict.pop(left.inner, ada_policy_id)
+  let left_assets: Data = left_assets
+  let left_lovelace = when left_lovelace is {
+    Some(tokens) -> list.expect_head(dict.to_pairs(tokens)).2nd
+    None -> 0
+  }
+  when builtin.un_map_data(right) is {
+    [] -> left_assets == right && assert_lovelace(left_lovelace, 0)
+    [first_asset, ..right_assets] ->
+      if builtin.b_data(ada_policy_id) == first_asset.1st {
+        and {
+          assert_lovelace(
+            left_lovelace,
+            builtin.un_i_data(
+              builtin.head_list(builtin.un_map_data(first_asset.2nd)).2nd,
+            ),
+          ),
+          left_assets == builtin.map_data(right_assets),
+        }
+      } else {
+        and {
+          assert_lovelace(left_lovelace, 0),
+          left_assets == right,
+        }
+      }
+  }
+}
+
+/// A slightly more efficient version of [`match_assets`](#match_assets) which
+/// fails if the provided `Data` is not akin to a [`Value`](#Value).
+pub fn expect_match_assets(left: Value, right: Data) -> Bool {
+  let (_, left_assets) = dict.pop(left.inner, ada_policy_id)
+  when builtin.un_map_data(right) is {
+    [] -> builtin.equals_data(left_assets, right)
+    [first_asset, ..right_assets] ->
+      builtin.equals_data(
+        left_assets,
+        if builtin.b_data(ada_policy_id) == first_asset.1st {
+          builtin.map_data(right_assets)
+        } else {
+          right
+        },
+      )
+  }
+}
+
+/// More efficient version of [`quantity_of`](#quantity_of), but fails if the
+/// target policy and asset aren't present in the value.
+pub fn expect_quantity_of(
   self: Value,
   policy_id: PolicyId,
   asset_name: AssetName,
-  quantity: Int,
-) -> Value {
-  if quantity == 0 {
-    self
-  } else {
-    let helper = fn(_, left, _right, keep, discard) {
-      let inner_result = dict.insert_with(
-        left,
-        asset_name,
-        quantity,
-        dict_strategy.sum_if_non_zero(),
-      )
-
-      if inner_result == dict.empty {
-        discard()
-      } else {
-        keep(inner_result)
-      }
-    }
-
-    Value(
-      dict.insert_with(
-        self.inner,
-        policy_id,
-        dict.singleton(asset_name, quantity),
-        helper,
-      ),
-    )
-  }
+) -> Int {
+  self.inner
+    |> dict.expect_get(policy_id)
+    |> dict.expect_get(asset_name)
 }
 
-test add_1() {
-  let v = zero
-    |> add(#"acab", #"beef", 321)
-    |> add(#"acab", #"beef", -321)
-  v == zero
-}
-
-test add_2() {
-  let v = from_lovelace(123)
-    |> add(#"acab", #"beef", 321)
-    |> add(#"acab", #"beef", -1 * 321)
-  v == from_lovelace(123)
-}
-
-test add_3() {
-  let v = from_lovelace(1)
-    |> add(ada_policy_id, ada_asset_name, 2)
-    |> add(ada_policy_id, ada_asset_name, 3)
-  v == from_lovelace(6)
-}
-
-test add_4() {
-  let v = zero
-    |> add(#"acab", #"beef", 0)
-  v == zero
-}
-
-test add_5() {
-  let v = zero
-    |> add(#"acab", #"beef", 0)
-    |> add(#"acab", #"beef", 0)
-  v == zero
-}
-
-pub fn difference(left v0: Value, right v1: Value) -> Value {
-  Value(
-    dict.difference_with(
-      v0.inner,
-      v1.inner,
-      fn(_, a0, a1, keep, discard) {
-        let result = dict.difference_with(
-          a0,
-          a1,
-          dict_strategy.difference_if_non_zero(),
-          dict_strategy.negate(),
-        )
-        if result == dict.empty {
-          discard()
-        } else {
-          keep(result)
-        }
-      },
-      fn(_k, right, keep, _discard) {
-        keep(dict.map(right, fn(_, qty) { -qty }))
-      },
-    ),
-  )
-}
-
-test difference_1() {
-  let v0 = from_lovelace(5)
-  let v1 = from_lovelace(3)
-
-  let diff = from_lovelace(2)
-
-  and {
-    (difference(v0, v1) == diff)?,
-    (merge(v0, negate(v1)) == diff)?,
-  }
-}
-
-test difference_2() {
-  let v = zero
-    |> add(#"acab", #"beef", 321)
-    |> add(#"f00d", #"cafe", 42)
-
-  and {
-    (difference(v, v) == zero)?,
-    (merge(v, negate(v)) == zero)?,
-  }
-}
-
-test difference_3() {
-  let left = zero |> add(#"00", #"aa", 5)
-  let right = zero |> add(#"01", #"bb", 3)
-
-  let diff = [(#"00", #"aa", 5), (#"01", #"bb", -3)]
-
-  and {
-    (flatten(difference(left, right)) == diff)?,
-    (flatten(merge(left, negate(right))) == diff)?,
-  }
-}
-
-test difference_4() {
-  let left = zero
-    |> add(#"00", #"aa", 10)
-    |> add(#"00", #"bb", 4)
-
-  let right = zero
-    |> add(#"00", #"aa", 10)
-    |> add(#"00", #"bb", 1)
-
-  let diff = [(#"00", #"bb", 3)]
-
-  and {
-    (flatten(difference(left, right)) == diff)?,
-    (flatten(merge(left, negate(right))) == diff)?,
-  }
-}
-
-/// Combine two `Value` together.
-pub fn merge(left v0: Value, right v1: Value) -> Value {
-  Value(
-    dict.union_with(
-      v0.inner,
-      v1.inner,
-      fn(_, a0, a1, keep, discard) {
-        let result = dict.union_with(a0, a1, dict_strategy.sum_if_non_zero())
-        if result == dict.empty {
-          discard()
-        } else {
-          keep(result)
-        }
-      },
-    ),
-  )
-}
-
-test merge_1() {
-  let v1 = from_lovelace(1)
-  let v2 = from_lovelace(-1)
-  merge(v1, v2) == zero
-}
-
-test merge_2() {
-  let v1 = from_asset(#"00", #"", 1)
-  let v2 = from_asset(#"01", #"", 2)
-  let v3 = from_asset(#"02", #"", 3)
-  let v = from_lovelace(42)
-    |> merge(v3)
-    |> merge(v1)
-    |> merge(v2)
-
-  flatten(v) == [
-    (#"", #"", 42), (#"00", #"", 1), (#"01", #"", 2), (#"02", #"", 3),
-  ]
-}
-
-test merge_3() {
-  let v1 = from_asset(#"00", #"", 1)
-  let v2 = from_asset(#"00", #"", -1)
-  let v3 = from_asset(#"01", #"", 1)
-
-  let v = zero
-    |> merge(v1)
-    |> merge(v2)
-    |> merge(v3)
-
-  flatten(v) == [(#"01", #"", 1)]
-}
-
-test merge_4() {
-  let v1 = from_asset(#"00", #"", 1)
-  let v2 = from_asset(#"00", #"", -1)
-
-  merge(v1, v2) == zero
-}
-
-test merge_5() {
-  let v = zero
-    |> add(#"acab", #"beef", 0)
-
-  merge(zero, v) == zero
-}
+// # Modifying
 
 /// Negates quantities of all tokens (including Ada) in that `Value`.
 ///
@@ -1123,11 +1235,242 @@ test without_lovelace_3() {
   without_lovelace(v) == without_lovelace(v2) && without_lovelace(v) == v2
 }
 
+// ## Modifying Forcibly
+
+/// Removes the first policy id from a `Value`, but fails if the `Value` is
+/// empty and contains no assets whatsoever.
+///
+/// This is useful to strip Ada forcibly out of values that are known to
+/// contain Ada (e.g. inputs or outputs).
+pub fn expect_tail(self: Value) -> Value {
+  self.inner |> dict.expect_tail |> Value
+}
+
+// ## Combining
+
+/// Add a (positive or negative) quantity of a single token to a assets.
+/// This is more efficient than [`merge`](#merge) for a single asset.
+pub fn add(
+  self: Value,
+  policy_id: PolicyId,
+  asset_name: AssetName,
+  quantity: Int,
+) -> Value {
+  if 0 == quantity {
+    self
+  } else {
+    let helper = fn(_, left, _right, keep, discard) {
+      let inner_result = dict.insert_with(
+        left,
+        asset_name,
+        quantity,
+        dict_strategy.sum_if_non_zero(),
+      )
+
+      if dict.empty == inner_result {
+        discard()
+      } else {
+        keep(inner_result)
+      }
+    }
+
+    Value(
+      dict.insert_with(
+        self.inner,
+        policy_id,
+        dict.singleton(asset_name, quantity),
+        helper,
+      ),
+    )
+  }
+}
+
+test add_1() {
+  let v = zero
+    |> add(#"acab", #"beef", 321)
+    |> add(#"acab", #"beef", -321)
+  v == zero
+}
+
+test add_2() {
+  let v = from_lovelace(123)
+    |> add(#"acab", #"beef", 321)
+    |> add(#"acab", #"beef", -1 * 321)
+  v == from_lovelace(123)
+}
+
+test add_3() {
+  let v = from_lovelace(1)
+    |> add(ada_policy_id, ada_asset_name, 2)
+    |> add(ada_policy_id, ada_asset_name, 3)
+  v == from_lovelace(6)
+}
+
+test add_4() {
+  let v = zero
+    |> add(#"acab", #"beef", 0)
+  v == zero
+}
+
+test add_5() {
+  let v = zero
+    |> add(#"acab", #"beef", 0)
+    |> add(#"acab", #"beef", 0)
+  v == zero
+}
+
+pub fn difference(left v0: Value, right v1: Value) -> Value {
+  Value(
+    dict.difference_with(
+      v0.inner,
+      v1.inner,
+      fn(_, a0, a1, keep, discard) {
+        let result = dict.difference_with(
+          a0,
+          a1,
+          dict_strategy.difference_if_non_zero(),
+          dict_strategy.negate(),
+        )
+        if dict.empty == result {
+          discard()
+        } else {
+          keep(result)
+        }
+      },
+      fn(_k, right, keep, _discard) {
+        keep(dict.map(right, fn(_, qty) { -qty }))
+      },
+    ),
+  )
+}
+
+test difference_1() {
+  let v0 = from_lovelace(5)
+  let v1 = from_lovelace(3)
+
+  let diff = from_lovelace(2)
+
+  and {
+    (difference(v0, v1) == diff)?,
+    (merge(v0, negate(v1)) == diff)?,
+  }
+}
+
+test difference_2() {
+  let v = zero
+    |> add(#"acab", #"beef", 321)
+    |> add(#"f00d", #"cafe", 42)
+
+  and {
+    (difference(v, v) == zero)?,
+    (merge(v, negate(v)) == zero)?,
+  }
+}
+
+test difference_3() {
+  let left = zero |> add(#"00", #"aa", 5)
+  let right = zero |> add(#"01", #"bb", 3)
+
+  let diff = [(#"00", #"aa", 5), (#"01", #"bb", -3)]
+
+  and {
+    (flatten(difference(left, right)) == diff)?,
+    (flatten(merge(left, negate(right))) == diff)?,
+  }
+}
+
+test difference_4() {
+  let left = zero
+    |> add(#"00", #"aa", 10)
+    |> add(#"00", #"bb", 4)
+
+  let right = zero
+    |> add(#"00", #"aa", 10)
+    |> add(#"00", #"bb", 1)
+
+  let diff = [(#"00", #"bb", 3)]
+
+  and {
+    (flatten(difference(left, right)) == diff)?,
+    (flatten(merge(left, negate(right))) == diff)?,
+  }
+}
+
+/// Combine two `Value` together.
+pub fn merge(left v0: Value, right v1: Value) -> Value {
+  Value(
+    dict.union_with(
+      v0.inner,
+      v1.inner,
+      fn(_, a0, a1, keep, discard) {
+        let result = dict.union_with(a0, a1, dict_strategy.sum_if_non_zero())
+        if dict.empty == result {
+          discard()
+        } else {
+          keep(result)
+        }
+      },
+    ),
+  )
+}
+
+test merge_1() {
+  let v1 = from_lovelace(1)
+  let v2 = from_lovelace(-1)
+  merge(v1, v2) == zero
+}
+
+test merge_2() {
+  let v1 = from_asset(#"00", #"", 1)
+  let v2 = from_asset(#"01", #"", 2)
+  let v3 = from_asset(#"02", #"", 3)
+  let v = from_lovelace(42)
+    |> merge(v3)
+    |> merge(v1)
+    |> merge(v2)
+
+  flatten(v) == [
+    (#"", #"", 42), (#"00", #"", 1), (#"01", #"", 2), (#"02", #"", 3),
+  ]
+}
+
+test merge_3() {
+  let v1 = from_asset(#"00", #"", 1)
+  let v2 = from_asset(#"00", #"", -1)
+  let v3 = from_asset(#"01", #"", 1)
+
+  let v = zero
+    |> merge(v1)
+    |> merge(v2)
+    |> merge(v3)
+
+  flatten(v) == [(#"01", #"", 1)]
+}
+
+test merge_4() {
+  let v1 = from_asset(#"00", #"", 1)
+  let v2 = from_asset(#"00", #"", -1)
+
+  merge(v1, v2) == zero
+}
+
+test merge_5() {
+  let v = zero
+    |> add(#"acab", #"beef", 0)
+
+  merge(zero, v) == zero
+}
+
 // ## Transforming
 
 /// Flatten a `Value` as list of 3-tuple `(PolicyId, AssetName, Quantity)`.
 ///
 /// Handy to manipulate values as uniform lists.
+///
+/// > [!CAUTION]
+/// > This function is quite expensive and really only viable in testing
+/// > scenarios. If you need to traverse all elements in a `Value`, prefer
+/// > [`reduce`](#reduce) or more bespoke functions for your use case.
 pub fn flatten(self: Value) -> List<(PolicyId, AssetName, Int)> {
   dict.foldr(
     self.inner,
@@ -1246,4 +1589,13 @@ test reduce_3() {
 /// Convert the value into a dictionary of dictionaries.
 pub fn to_dict(self: Value) -> Dict<PolicyId, Dict<AssetName, Int>> {
   self.inner
+}
+
+/// Convert the value into an associative list of pairs.
+pub fn to_pairs(self: Value) -> Pairs<PolicyId, Dict<AssetName, Int>> {
+  self.inner |> dict.to_pairs
+}
+
+fn tautology(a: a) -> Bool {
+  a == a
 }

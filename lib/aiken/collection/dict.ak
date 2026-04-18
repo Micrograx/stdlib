@@ -341,8 +341,7 @@ fn do_expect_find(self: Pairs<ByteArray, value>, value v: value) -> ByteArray {
 }
 
 test expect_find_1() fail {
-  let x = expect_find(empty, foo)
-  x == x
+  expect_find(empty, foo) |> tautology
 }
 
 test expect_find_2() {
@@ -354,12 +353,12 @@ test expect_find_2() {
 }
 
 test expect_find_3() fail {
-  let x = expect_find(
+  expect_find(
     empty
       |> insert(foo, 14),
     42,
   )
-  x == x
+    |> tautology
 }
 
 test expect_find_4() {
@@ -387,8 +386,7 @@ fn do_expect_get(self: Pairs<ByteArray, value>, key k: ByteArray) -> value {
 }
 
 test expect_get_1() fail {
-  let x = expect_get(empty, foo)
-  x == x
+  expect_get(empty, foo) |> tautology
 }
 
 test expect_get_2() {
@@ -402,18 +400,15 @@ test expect_get_3() fail {
   let m = empty
     |> insert(foo, "Aiken")
     |> insert(bar, "awesome")
-  let x = expect_get(m, key: baz)
-  x == x
+  expect_get(m, key: baz) |> tautology
 }
 
 test expect_get_4() fail {
-  let x = expect_get(fixture_bench, "bcd")
-  x == x
+  expect_get(fixture_bench, "bcd") |> tautology
 }
 
 test expect_get_5() fail {
-  let x = expect_get(fixture_bench, "kkk")
-  x == x
+  expect_get(fixture_bench, "lll") |> tautology
 }
 
 test expect_get_bench() {
@@ -735,11 +730,11 @@ test get_or_else_4() {
 }
 
 test get_5() {
-  get(fixture_bench, "kkk") == None
+  get(fixture_bench, "lll") == None
 }
 
 test get_or_else_5() {
-  get_or_else(fixture_bench, "kkk", fn() { "" }) == ""
+  get_or_else(fixture_bench, "lll", fn() { "" }) == ""
 }
 
 test get_bench() {
@@ -1431,7 +1426,7 @@ test map_2() {
 ///     |> dict.insert(key: "b", value: 200)
 ///     |> dict.pop(key: "a")
 ///
-/// result == 100
+/// value == 100
 /// ```
 pub fn pop(
   self: Dict<key, value>,
@@ -1523,8 +1518,7 @@ fn do_expect_delete(
 }
 
 test expect_delete_1() fail {
-  let x = expect_delete(empty, foo)
-  x == x
+  expect_delete(empty, foo) |> tautology
 }
 
 test expect_delete_2() {
@@ -1534,8 +1528,7 @@ test expect_delete_2() {
 
 test expect_delete_3() fail {
   let m = empty |> insert(foo, 14)
-  let x = expect_delete(m, bar)
-  x == x
+  expect_delete(m, bar) |> tautology
 }
 
 test expect_delete_4() {
@@ -1553,8 +1546,7 @@ test expect_delete_5() {
 }
 
 test expect_delete_6() fail {
-  let x = expect_delete(fixture_bench, "bcd")
-  x == x
+  expect_delete(fixture_bench, "bcd") |> tautology
 }
 
 test expect_delete_bench() {
@@ -1589,8 +1581,7 @@ fn do_expect_pop(
 }
 
 test expect_pop_1() fail {
-  let x = expect_pop(empty, foo)
-  x == x
+  expect_pop(empty, foo) |> tautology
 }
 
 test expect_pop_2() {
@@ -1602,8 +1593,7 @@ test expect_pop_2() {
 test expect_pop_3() fail {
   let m = empty
     |> insert(foo, 14)
-  let x = expect_pop(m, bar)
-  x == x
+  expect_pop(m, bar) |> tautology
 }
 
 test expect_pop_4() {
@@ -1622,8 +1612,7 @@ test expect_pop_5() {
 }
 
 test expect_pop_6() fail {
-  let x = expect_pop(fixture_bench, "bcd")
-  x == x
+  expect_pop(fixture_bench, "bcd") |> tautology
 }
 
 test expect_pop_bench() {
@@ -1632,6 +1621,30 @@ test expect_pop_bench() {
     expect_pop(fixture_bench, "fff") == ("6", fixture_delete_fff),
     expect_pop(fixture_bench, "kkk") == ("11", fixture_delete_kkk),
   }
+}
+
+/// Drop the first key/value out of a dictionnary, and fails if the dictionnary
+/// is empty.
+///
+/// ```aiken
+/// dict.expect_tail(dict.empty) → 💥
+/// dict.expect_tail(dict.singleton("a", 1)) == dict.empty
+/// dict.expect_tail(dict.from_pairs([Pair("a", 1), Pair("b", 2)])) == dict.singleton("b", 2)
+/// ```
+pub fn expect_tail(self: Dict<key, value>) -> Dict<key, value> {
+  self.inner |> builtin.tail_list |> Dict
+}
+
+test expect_tail_1() fail {
+  expect_tail(empty) |> tautology
+}
+
+test expect_tail_2() {
+  expect_tail(singleton("a", 1)) == empty
+}
+
+test expect_tail_3() {
+  expect_tail(from_pairs([Pair("a", 1), Pair("b", 2)])) == singleton("b", 2)
 }
 
 // ## Combining
@@ -1859,8 +1872,8 @@ test foldl2_size_and_merge() {
   )
 
   and {
-    size == 10,
-    merge == "aaa1bbb2ccc3ddd4eee5fff6ggg7hhh8iii9jjj10",
+    size == 11,
+    merge == "aaa1bbb2ccc3ddd4eee5fff6ggg7hhh8iii9jjj10kkk11",
   }
 }
 
@@ -1940,8 +1953,8 @@ test foldr2_size_and_merge() {
   )
 
   and {
-    size == 10,
-    merge == "jjj10iii9hhh8ggg7fff6eee5ddd4ccc3bbb2aaa1",
+    size == 11,
+    merge == "kkk11jjj10iii9hhh8ggg7fff6eee5ddd4ccc3bbb2aaa1",
   }
 }
 
@@ -1967,4 +1980,8 @@ test to_list_1() {
 
 test to_list_2() {
   to_pairs(fixture_1) == [Pair(bar, 14), Pair(foo, 42)]
+}
+
+fn tautology(a: a) -> Bool {
+  a == a
 }

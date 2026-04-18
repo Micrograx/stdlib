@@ -438,8 +438,7 @@ pub fn expect_get_first(self: Pairs<key, value>, key k: key) -> value {
 }
 
 test expect_get_first_1() fail {
-  let x = expect_get_first([], "a")
-  x == x
+  expect_get_first([], "a") |> tautology
 }
 
 test expect_get_first_2() {
@@ -455,8 +454,7 @@ test expect_get_first_4() {
 }
 
 test expect_get_first_5() fail {
-  let x = expect_get_first([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "d")
-  x == x
+  expect_get_first([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "d") |> tautology
 }
 
 test expect_get_first_bench() {
@@ -507,8 +505,7 @@ fn do_expect_get_last(
 }
 
 test expect_get_last_1() fail {
-  let x = expect_get_last([], "a")
-  x == x
+  expect_get_last([], "a") |> tautology
 }
 
 test expect_get_last_2() {
@@ -524,8 +521,7 @@ test expect_get_last_4() {
 }
 
 test expect_get_last_5() fail {
-  let x = expect_get_last([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "d")
-  x == x
+  expect_get_last([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "d") |> tautology
 }
 
 test expect_get_last_bench() {
@@ -555,8 +551,7 @@ pub fn expect_find_first(self: Pairs<key, value>, value v: value) -> key {
 }
 
 test expect_find_first_1() fail {
-  let x = expect_find_first([], "a")
-  x == x
+  expect_find_first([], "a") |> tautology
 }
 
 test expect_find_first_2() {
@@ -564,8 +559,7 @@ test expect_find_first_2() {
 }
 
 test expect_find_first_3() fail {
-  let x = expect_find_first([Pair("a", 14)], 42)
-  x == x
+  expect_find_first([Pair("a", 14)], 42) |> tautology
 }
 
 test expect_find_first_4() {
@@ -620,8 +614,7 @@ fn do_expect_find_last(
 }
 
 test expect_find_last_1() fail {
-  let x = expect_find_last([], "a")
-  x == x
+  expect_find_last([], "a") |> tautology
 }
 
 test expect_find_last_2() {
@@ -629,8 +622,7 @@ test expect_find_last_2() {
 }
 
 test expect_find_last_3() fail {
-  let x = expect_find_last([Pair("a", 14)], 42)
-  x == x
+  expect_find_last([Pair("a", 14)], 42) |> tautology
 }
 
 test expect_find_last_4() {
@@ -1039,13 +1031,30 @@ pub fn pop_until(
   self: Pairs<key, value>,
   until: fn(key, value) -> Bool,
 ) -> (Option<Pair<key, value>>, Pairs<key, value>) {
+  pop_until_and_then(self, until, as_tuple)
+}
+
+/// Like [`pop_until`](#pop_until) but leverages backpassing.
+///
+/// ```aiken
+/// let predicate = fn(k, v) { k == "a" && v > 1 }
+///
+/// expect None, [] <- pairs.pop_until_and_then([], predicate)
+/// expect None, [] <- pairs.pop_until_and_then([Pair("a", 1), Pair("b", 2)], predicate)
+/// expect Some(Pair("a", 3), [] <- pairs.pop_until_and_then([Pair("a", 1), Pair("b", 2), Pair("a", 3)], predicate)
+/// ```
+pub fn pop_until_and_then(
+  self: Pairs<key, value>,
+  until: fn(key, value) -> Bool,
+  return: fn(Option<Pair<key, value>>, Pairs<key, value>) -> result,
+) -> result {
   when self is {
-    [] -> (None, self)
+    [] -> return(None, self)
     [Pair(k, v) as head, ..tail] ->
       if until(k, v) {
-        (Some(head), tail)
+        return(Some(head), tail)
       } else {
-        pop_until(tail, until)
+        pop_until_and_then(tail, until, return)
       }
   }
 }
@@ -1083,60 +1092,6 @@ test pop_until_bench() {
   }
 }
 
-/// Like [`pop_until`](#pop_until) but leverages backpassing.
-///
-/// ```aiken
-/// let predicate = fn(k, v) { k == "a" && v > 1 }
-///
-/// expect None, [] <- pairs.pop_until_and_then([], predicate)
-/// expect None, [] <- pairs.pop_until_and_then([Pair("a", 1), Pair("b", 2)], predicate)
-/// expect Some(Pair("a", 3), [] <- pairs.pop_until_and_then([Pair("a", 1), Pair("b", 2), Pair("a", 3)], predicate)
-/// ```
-pub fn pop_until_and_then(
-  self: Pairs<key, value>,
-  until: fn(key, value) -> Bool,
-  return: fn(Option<Pair<key, value>>, Pairs<key, value>) -> result,
-) -> result {
-  when self is {
-    [] -> return(None, self)
-    [Pair(k, v) as head, ..tail] ->
-      if until(k, v) {
-        return(Some(head), tail)
-      } else {
-        pop_until_and_then(tail, until, return)
-      }
-  }
-}
-
-test pop_until_and_then_1() {
-  expect None, [] <- pop_until_and_then([], fn(k, _) { k == "a" })
-  Void
-}
-
-test pop_until_and_then_2() {
-  expect Some(Pair("a", 1)), [Pair("b", 2)] <- pop_until_and_then(
-    [Pair("a", 1), Pair("b", 2)],
-    fn(k, _) { k == "a" },
-  )
-  Void
-}
-
-test pop_until_and_then_3() {
-  expect Some(Pair("c", 3)), [] <- pop_until_and_then(
-    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
-    fn(k, _) { k == "c" },
-  )
-  Void
-}
-
-test pop_until_and_then_4() {
-  expect None, [] <- pop_until_and_then(
-    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
-    fn(_, _) { False },
-  )
-  Void
-}
-
 test pop_until_and_then_bench() {
   and {
     pop_until_and_then(
@@ -1171,13 +1126,29 @@ pub fn pop_until_key(
   self: Pairs<key, value>,
   until: key,
 ) -> (Option<value>, Pairs<key, value>) {
+  pop_until_key_and_then(self, until, as_tuple)
+}
+
+/// A version of [`pop_until_key`](#pop_until_key) which leverages backpassing.
+///
+/// ```aiken
+/// expect None, [] <- pairs.pop_until_key_and_then([], "a")
+/// expect Some(1), [Pair("b", 2)] <- pairs.pop_until_key_and_then([Pair("a", 1), Pair("b", 2)], "a")
+/// expect Some(3), [] <- pairs.pop_until_key_and_then([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "c")
+/// expect None, [] <- pairs.pop_until_key_and_then([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "")
+/// ```
+pub fn pop_until_key_and_then(
+  self: Pairs<key, value>,
+  until: key,
+  return: fn(Option<value>, Pairs<key, value>) -> result,
+) -> result {
   when self is {
-    [] -> (None, self)
+    [] -> return(None, self)
     [Pair(k, _) as head, ..tail] ->
       if until == k {
-        (Some(head.2nd), tail)
+        return(Some(head.2nd), tail)
       } else {
-        pop_until_key(tail, until)
+        pop_until_key_and_then(tail, until, return)
       }
   }
 }
@@ -1207,59 +1178,6 @@ test pop_until_key_bench() {
     pop_until_key(fixture_bench, "f").1st == Some(6),
     pop_until_key(fixture_bench, "k").1st == Some(11),
   }
-}
-
-/// A version of [`pop_until_key`](#pop_until_key) which leverages backpassing.
-///
-/// ```aiken
-/// expect None, [] <- pairs.pop_until_key_and_then([], "a")
-/// expect Some(1), [Pair("b", 2)] <- pairs.pop_until_key_and_then([Pair("a", 1), Pair("b", 2)], "a")
-/// expect Some(3), [] <- pairs.pop_until_key_and_then([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "c")
-/// expect None, [] <- pairs.pop_until_key_and_then([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "")
-/// ```
-pub fn pop_until_key_and_then(
-  self: Pairs<key, value>,
-  until: key,
-  return: fn(Option<value>, Pairs<key, value>) -> result,
-) -> result {
-  when self is {
-    [] -> return(None, self)
-    [Pair(k, _) as head, ..tail] ->
-      if until == k {
-        return(Some(head.2nd), tail)
-      } else {
-        pop_until_key_and_then(tail, until, return)
-      }
-  }
-}
-
-test pop_until_key_and_then_1() {
-  expect None, [] <- pop_until_key_and_then([], "a")
-  Void
-}
-
-test pop_until_key_and_then_2() {
-  expect Some(1), [Pair("b", 2)] <- pop_until_key_and_then(
-    [Pair("a", 1), Pair("b", 2)],
-    "a",
-  )
-  Void
-}
-
-test pop_until_key_and_then_3() {
-  expect Some(3), [] <- pop_until_key_and_then(
-    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
-    "c",
-  )
-  Void
-}
-
-test pop_until_key_and_then_4() {
-  expect None, [] <- pop_until_key_and_then(
-    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
-    "",
-  )
-  Void
 }
 
 test pop_until_key_and_then_bench() {
@@ -1351,8 +1269,7 @@ pub fn expect_delete_first(
 }
 
 test expect_delete_first_1() fail {
-  let x = expect_delete_first([], "a")
-  x == x
+  expect_delete_first([], "a") |> tautology
 }
 
 test expect_delete_first_2() {
@@ -1362,8 +1279,7 @@ test expect_delete_first_2() {
 }
 
 test expect_delete_first_3() fail {
-  let x = expect_delete_first([Pair("a", 14)], "b")
-  x == x
+  expect_delete_first([Pair("a", 14)], "b") |> tautology
 }
 
 /// More efficient version of [`delete_last`](#delete_last), which fails if
@@ -1402,47 +1318,7 @@ pub fn expect_pop_until(
   self: Pairs<key, value>,
   until: fn(key, value) -> Bool,
 ) -> (Pair<key, value>, Pairs<key, value>) {
-  let Pair(k, v) as head = builtin.head_list(self)
-  if until(k, v) {
-    (head, builtin.tail_list(self))
-  } else {
-    expect_pop_until(builtin.tail_list(self), until)
-  }
-}
-
-test expect_pop_until_1() fail {
-  let x = expect_pop_until([], fn(k, _) { k == "a" })
-  x == x
-}
-
-test expect_pop_until_2() {
-  expect_pop_until([Pair("a", 1), Pair("b", 2)], fn(k, _) { k == "a" }) == (
-    Pair("a", 1),
-    [Pair("b", 2)],
-  )
-}
-
-test expect_pop_until_3() {
-  expect_pop_until(
-    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
-    fn(k, _) { k == "c" },
-  ) == (Pair("c", 3), [])
-}
-
-test expect_pop_until_4() fail {
-  let x = expect_pop_until(
-    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
-    fn(_, _) { False },
-  )
-  x == x
-}
-
-test expect_pop_until_bench() {
-  and {
-    expect_pop_until(fixture_bench, fn(k, _) { k == "a" }).1st == Pair("a", 1),
-    expect_pop_until(fixture_bench, fn(k, _) { k == "f" }).1st == Pair("f", 6),
-    expect_pop_until(fixture_bench, fn(k, _) { k == "k" }).1st == Pair("k", 11),
-  }
+  expect_pop_until_and_then(self, until, as_tuple)
 }
 
 /// A version of [`expect_pop_until`](#expect_pop_until) which leverages backpassing.
@@ -1467,33 +1343,38 @@ pub fn expect_pop_until_and_then(
   }
 }
 
-test expect_pop_until_and_then_1() fail {
-  let x, _ <- expect_pop_until_and_then([], fn(k, _) { k == "a" })
-  x == x
+test expect_pop_until_1() fail {
+  expect_pop_until([], fn(k, _) { k == "a" }) |> tautology
 }
 
-test expect_pop_until_and_then_2() {
-  expect Pair("a", 1), [Pair("b", 2)] <- expect_pop_until_and_then(
-    [Pair("a", 1), Pair("b", 2)],
-    fn(k, _) { k == "a" },
+test expect_pop_until_2() {
+  expect_pop_until([Pair("a", 1), Pair("b", 2)], fn(k, _) { k == "a" }) == (
+    Pair("a", 1),
+    [Pair("b", 2)],
   )
-  Void
 }
 
-test expect_pop_until_and_then_3() {
-  expect Pair("c", 3), [] <- expect_pop_until_and_then(
+test expect_pop_until_3() {
+  expect_pop_until(
     [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
     fn(k, _) { k == "c" },
-  )
-  Void
+  ) == (Pair("c", 3), [])
 }
 
-test expect_pop_until_and_then_4() fail {
-  let x, _ <- expect_pop_until_and_then(
+test expect_pop_until_4() fail {
+  expect_pop_until(
     [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
     fn(_, _) { False },
   )
-  x == x
+    |> tautology
+}
+
+test expect_pop_until_bench() {
+  and {
+    expect_pop_until(fixture_bench, fn(k, _) { k == "a" }).1st == Pair("a", 1),
+    expect_pop_until(fixture_bench, fn(k, _) { k == "f" }).1st == Pair("f", 6),
+    expect_pop_until(fixture_bench, fn(k, _) { k == "k" }).1st == Pair("k", 11),
+  }
 }
 
 test expect_pop_until_and_then_bench() {
@@ -1528,41 +1409,7 @@ pub fn expect_pop_until_key(
   self: Pairs<key, value>,
   until: key,
 ) -> (value, Pairs<key, value>) {
-  let head = builtin.head_list(self)
-  if until == head.1st {
-    (head.2nd, builtin.tail_list(self))
-  } else {
-    expect_pop_until_key(builtin.tail_list(self), until)
-  }
-}
-
-test expect_pop_until_key_1() fail {
-  let x = expect_pop_until_key([], "a")
-  x == x
-}
-
-test expect_pop_until_key_2() {
-  expect_pop_until_key([Pair("a", 1), Pair("b", 2)], "a") == (1, [Pair("b", 2)])
-}
-
-test expect_pop_until_key_3() {
-  expect_pop_until_key([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "c") == (
-    3,
-    [],
-  )
-}
-
-test expect_pop_until_key_4() fail {
-  let x = expect_pop_until_key([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "")
-  x == x
-}
-
-test expect_pop_until_key_bench() {
-  and {
-    expect_pop_until_key(fixture_bench, "a").1st == 1,
-    expect_pop_until_key(fixture_bench, "f").1st == 6,
-    expect_pop_until_key(fixture_bench, "k").1st == 11,
-  }
+  expect_pop_until_key_and_then(self, until, as_tuple)
 }
 
 /// A version of [`expect_pop_until_key`](#expect_pop_until_key) which leverages backpassing.
@@ -1586,33 +1433,32 @@ pub fn expect_pop_until_key_and_then(
   }
 }
 
-test expect_pop_until_key_and_then_1() fail {
-  expect x, y <- expect_pop_until_key_and_then([], "a")
-  x == x && y == y
+test expect_pop_until_key_1() fail {
+  expect_pop_until_key([], "a") |> tautology
 }
 
-test expect_pop_until_key_and_then_2() {
-  expect 1, [Pair("b", 2)] <- expect_pop_until_key_and_then(
-    [Pair("a", 1), Pair("b", 2)],
-    "a",
-  )
-  Void
+test expect_pop_until_key_2() {
+  expect_pop_until_key([Pair("a", 1), Pair("b", 2)], "a") == (1, [Pair("b", 2)])
 }
 
-test expect_pop_until_key_and_then_3() {
-  expect 3, [] <- expect_pop_until_key_and_then(
-    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
-    "c",
+test expect_pop_until_key_3() {
+  expect_pop_until_key([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "c") == (
+    3,
+    [],
   )
-  Void
 }
 
-test expect_pop_until_key_and_then_4() fail {
-  expect x, y <- expect_pop_until_key_and_then(
-    [Pair("a", 1), Pair("b", 2), Pair("c", 3)],
-    "",
-  )
-  x == x && y == y
+test expect_pop_until_key_4() fail {
+  expect_pop_until_key([Pair("a", 1), Pair("b", 2), Pair("c", 3)], "")
+    |> tautology
+}
+
+test expect_pop_until_key_bench() {
+  and {
+    expect_pop_until_key(fixture_bench, "a").1st == 1,
+    expect_pop_until_key(fixture_bench, "f").1st == 6,
+    expect_pop_until_key(fixture_bench, "k").1st == 11,
+  }
 }
 
 test expect_pop_until_key_and_then_bench() {
@@ -1723,4 +1569,12 @@ test foldr_4() {
           fn(k, v, str) { bytearray.concat(str, bytearray.concat(k, v)) },
         )
   )
+}
+
+fn tautology(a: a) -> Bool {
+  a == a
+}
+
+fn as_tuple(a: a, b: b) -> (a, b) {
+  (a, b)
 }
