@@ -2,7 +2,7 @@ use aiken
 use aiken/builtin.{decode_utf8, serialise_data}
 use aiken/primitive/bytearray
 
-/// Obtain a String representation of _anything_. This is particularly (and only) useful for tracing
+/// Obtain a `String` representation of _anything_. This is particularly (and only) useful for tracing
 /// and debugging. This function is expensive and should not be used in any production code as it
 /// will very likely explodes the validator's budget.
 ///

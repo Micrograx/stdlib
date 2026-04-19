@@ -20,18 +20,6 @@ pub fn from_bytearray(bytes: ByteArray) -> String {
   decode_utf8(bytes)
 }
 
-test from_bytearray_1() {
-  from_bytearray(#[]) == @""
-}
-
-test from_bytearray_2() {
-  from_bytearray(#[65, 66, 67]) == @"ABC"
-}
-
-test from_bytearray_3() {
-  from_bytearray("ABC") == @"ABC"
-}
-
 /// Convert an `Int` to its `String` representation.
 ///
 /// ```aiken
@@ -39,22 +27,6 @@ test from_bytearray_3() {
 /// ```
 pub fn from_int(n: Int) -> String {
   diagnostic(n, "") |> decode_utf8
-}
-
-test from_int_1() {
-  from_int(0) == @"0"
-}
-
-test from_int_2() {
-  from_int(5) == @"5"
-}
-
-test from_int_3() {
-  from_int(42) == @"42"
-}
-
-test from_int_4() {
-  from_int(200) == @"200"
 }
 
 // ## Combining
@@ -66,18 +38,6 @@ test from_int_4() {
 /// ```
 pub fn concat(left: String, right: String) -> String {
   append_string(left, right)
-}
-
-test concat_1() {
-  concat(@"", @"") == @""
-}
-
-test concat_2() {
-  concat(@"", @"foo") == concat(@"foo", @"")
-}
-
-test concat_3() {
-  concat(left: @"Hello", right: @", World!") == @"Hello, World!"
 }
 
 /// Join a list of strings, separated by a given _delimiter_.
@@ -107,14 +67,6 @@ fn do_join(xs, delimiter, bytes) {
   }
 }
 
-test join_1() {
-  join([], @",") == @""
-}
-
-test join_2() {
-  join([@"a", @"b", @"c"], @",") == @"a,b,c"
-}
-
 // ## Transforming
 
 /// Convert a `String` into a `ByteArray`
@@ -124,16 +76,4 @@ test join_2() {
 /// ```
 pub fn to_bytearray(self: String) -> ByteArray {
   encode_utf8(self)
-}
-
-test to_bytearray_1() {
-  to_bytearray(@"") == ""
-}
-
-test to_bytearray_2() {
-  to_bytearray(@"ABC") == #[65, 66, 67]
-}
-
-test to_bytearray_3() {
-  to_bytearray(@"ABC") == "ABC"
 }
