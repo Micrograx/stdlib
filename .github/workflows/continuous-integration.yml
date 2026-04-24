@@ -39,8 +39,11 @@ jobs:
       # - name: 📝 Run fmt
       #   run: aiken fmt --check
 
-      - name: 🔬 Run tests
-        run: aiken check
+      - name: 🔬 Run tests (verbose)
+        run: aiken check -t verbose
+
+      - name: 🔬 Run tests (silent)
+        run: aiken check -t silent
 
   docs:
     strategy:
