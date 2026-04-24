@@ -88,11 +88,19 @@ pub fn from_asset_list(xs: Pairs<PolicyId, Pairs<AssetName, Int>>) -> Value {
   xs
     |> list.foldr(
         dict.empty,
-        fn(inner, acc) {
-          expect Pair(p, [_, ..] as x) = inner
-          x
-            |> dict.from_ascending_pairs_with(fn(v) { 0 != v })
-            |> dict.insert_with(acc, p, _, dict_strategy.expect_no_duplicate())
+        fn(Pair(policy, assets), acc) {
+          when assets is {
+            [] -> fail @"from_asset_list: empty assets"
+            _ ->
+              assets
+                |> dict.from_ascending_pairs_with(fn(v) { 0 != v })
+                |> dict.insert_with(
+                    acc,
+                    policy,
+                    _,
+                    dict_strategy.expect_no_duplicate(),
+                  )
+          }
         },
       )
     |> Value
