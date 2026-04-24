@@ -1,8 +1,8 @@
 use aiken/builtin
-use aiken/crypto/bls12_381/scalar
 use aiken/crypto/bls12_381/g2.{
-  generator, zero, compress, equal, add, sub, scale, hash_to_group,
+  add, compress, equal, generator, hash_to_group, scale, sub, zero,
 }
+use aiken/crypto/bls12_381/scalar
 
 // -------------------------------------------------------------------- compress
 

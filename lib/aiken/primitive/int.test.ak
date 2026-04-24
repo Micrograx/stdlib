@@ -1,6 +1,5 @@
 use aiken/primitive/int.{
-  from_bytearray_big_endian, from_bytearray_little_endian, from_utf8,
-  to_string,
+  from_bytearray_big_endian, from_bytearray_little_endian, from_utf8, to_string,
 }
 
 // --------------------------------------------------- from_bytearray_big_endian

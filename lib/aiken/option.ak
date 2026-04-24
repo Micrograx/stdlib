@@ -5,7 +5,6 @@
 // ## Inspecting
 
 /// Asserts whether an option is `None`.
-
 pub fn is_none(self: Option<a>) -> Bool {
   when self is {
     Some(_) -> False

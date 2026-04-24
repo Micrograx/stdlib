@@ -1,8 +1,8 @@
 use aiken/builtin
 use aiken/crypto/bitwise.{one, zero}
 use aiken/crypto/bls12_381/scalar.{
-  field_prime, from_bytes, from_bytes_little_endian, from_int, scale, scale2,
-  add, div, mul, neg, recip, sub, to_int, to_bytes,
+  add, div, field_prime, from_bytes, from_bytes_little_endian, from_int, mul,
+  neg, recip, scale, scale2, sub, to_bytes, to_int,
 }
 
 // ----------------------------------------------------------------------- scale

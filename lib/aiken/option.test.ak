@@ -1,6 +1,5 @@
 use aiken/option.{
-  is_none, is_some, and_then, choice, flatten, map, map2, map3, or_try,
-  or_else,
+  and_then, choice, flatten, is_none, is_some, map, map2, map3, or_else, or_try,
 }
 
 // --------------------------------------------------------------------- helpers

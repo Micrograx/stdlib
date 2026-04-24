@@ -1,4 +1,6 @@
-use aiken/primitive/string.{from_bytearray, from_int, concat, join, to_bytearray}
+use aiken/primitive/string.{
+  concat, from_bytearray, from_int, join, to_bytearray,
+}
 
 // -------------------------------------------------------------- from_bytearray
 

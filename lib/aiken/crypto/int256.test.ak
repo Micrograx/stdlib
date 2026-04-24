@@ -1,10 +1,10 @@
 use aiken/builtin
 use aiken/crypto/bitwise.{one, zero}
 use aiken/crypto/int256.{
-  field, from_bytearray_big_endian, from_bytearray_little_endian, from_int,
-  scale, scale2, add, add_bytes, add_int, mul, mul_bytes, mul_int, neg, sub,
-  sub_bytes, sub_int, to_bytearray_big_endian, to_bytearray_little_endian,
-  to_int,
+  add, add_bytes, add_int, field, from_bytearray_big_endian,
+  from_bytearray_little_endian, from_int, mul, mul_bytes, mul_int, neg, scale,
+  scale2, sub, sub_bytes, sub_int, to_bytearray_big_endian,
+  to_bytearray_little_endian, to_int,
 }
 
 // --------------------------------------------------- from_bytearray_big_endian

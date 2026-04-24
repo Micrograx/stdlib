@@ -1,6 +1,4 @@
-use aiken/math.{
-  abs, clamp, gcd, is_sqrt, log, log2, max, min, pow, pow2, sqrt,
-}
+use aiken/math.{abs, clamp, gcd, is_sqrt, log, log2, max, min, pow, pow2, sqrt}
 
 // ------------------------------------------------------------------------- abs
 

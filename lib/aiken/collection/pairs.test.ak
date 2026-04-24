@@ -1,15 +1,14 @@
 use aiken/builtin
-use aiken/primitive/bytearray
 use aiken/collection/pairs.{
-  get_all, get_first, get_last, find_all, find_first, find_last, has_key,
-  keys, values, expect_get_first, expect_get_last, expect_find_first,
-  expect_find_last, expect_has_key, delete_all, delete_first, delete_last,
-  insert_by_ascending_key, insert_with_by_ascending_key, map, pop_until,
-  pop_until_and_then, pop_until_key, pop_until_key_and_then,
-  repsert_by_ascending_key, expect_delete_first, expect_pop_until,
-  expect_pop_until_and_then, expect_pop_until_key,
-  expect_pop_until_key_and_then, foldl, foldr,
+  delete_all, delete_first, delete_last, expect_delete_first, expect_find_first,
+  expect_find_last, expect_get_first, expect_get_last, expect_has_key,
+  expect_pop_until, expect_pop_until_and_then, expect_pop_until_key,
+  expect_pop_until_key_and_then, find_all, find_first, find_last, foldl, foldr,
+  get_all, get_first, get_last, has_key, insert_by_ascending_key,
+  insert_with_by_ascending_key, keys, map, pop_until, pop_until_and_then,
+  pop_until_key, pop_until_key_and_then, repsert_by_ascending_key, values,
 }
+use aiken/primitive/bytearray
 
 // ---------------------------------------------------------- fixtures & fuzzers
 

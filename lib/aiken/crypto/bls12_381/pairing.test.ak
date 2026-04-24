@@ -2,8 +2,8 @@ use aiken/crypto/bitwise.{State}
 use aiken/crypto/bls12_381.{domain_separation_tag_nul}
 use aiken/crypto/bls12_381/g1
 use aiken/crypto/bls12_381/g2
+use aiken/crypto/bls12_381/pairing.{final_exponentiation, miller_loop}
 use aiken/crypto/bls12_381/scalar.{Scalar}
-use aiken/crypto/bls12_381/pairing.{miller_loop, final_exponentiation}
 
 // -------------------------------- simple_miller_loop_with_final_exponentiation
 

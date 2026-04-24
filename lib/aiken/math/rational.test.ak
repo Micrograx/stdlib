@@ -1,9 +1,8 @@
 use aiken/fuzz.{both, either, map}
 use aiken/math/rational.{
-  Rational, from_int, new, zero, denominator, numerator, abs, negate,
-  reciprocal, reduce, add, div, mul, sub, compare, compare_with,
-  arithmetic_mean, geometric_mean, ceil, floor, pow, proper_fraction, round,
-  round_even, truncate,
+  Rational, abs, add, arithmetic_mean, ceil, compare, compare_with, denominator,
+  div, floor, from_int, geometric_mean, mul, negate, new, numerator, pow,
+  proper_fraction, reciprocal, reduce, round, round_even, sub, truncate, zero,
 }
 
 // ---------------------------------------------------------- fixtures & fuzzers

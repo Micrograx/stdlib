@@ -1,6 +1,6 @@
 # Changelog
 
-## v3.1.0 - UNRELEASED
+## v3.1.0 - 2026-04-25
 
 ### Added
 

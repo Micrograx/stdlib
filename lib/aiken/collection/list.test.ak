@@ -1,16 +1,16 @@
 use aiken/builtin
+use aiken/collection/list.{
+  all, any, at, concat, count, delete, difference, drop, drop_while, expect_any,
+  expect_at, expect_delete, expect_drop, expect_find, expect_find_map,
+  expect_has, expect_head, expect_index_of, expect_init, expect_last,
+  expect_tail, expect_take, filter, filter_map, find, find_map, flat_map, foldl,
+  foldl2, foldr, foldr2, for_each, has, head, index_of, indexed_foldr,
+  indexed_map, init, is_empty, last, length, map, map2, map3, partition, push,
+  range, reduce, repeat, reverse, slice, sort, span, tail, take, take_while,
+  unique, unzip, zip,
+}
 use aiken/primitive/bytearray
 use aiken/primitive/int
-use aiken/collection/list.{
-  push, range, repeat, all, any, at, count, find, find_map, has, head,
-  is_empty, index_of, last, length, expect_any, expect_at, expect_find,
-  expect_find_map, expect_has, expect_head, expect_index_of, expect_last,
-  delete, drop, drop_while, filter, filter_map, init, partition, slice, span,
-  tail, take, take_while, unique, expect_delete, expect_drop, expect_init,
-  expect_tail, expect_take, flat_map, for_each, indexed_map, map, map2, map3,
-  reverse, sort, unzip, concat, difference, zip, foldl, foldl2, foldr,
-  foldr2, indexed_foldr, reduce,
-}
 
 // ---------------------------------------------------------- fixtures & fuzzers
 

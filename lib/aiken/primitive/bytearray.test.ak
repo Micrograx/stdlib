@@ -1,8 +1,7 @@
 use aiken/primitive/bytearray.{
-  from_int_big_endian, from_int_little_endian, from_string, push, index_of,
-  is_empty, length, test_bit, drop, slice, take, concat, foldl, foldr,
-  reduce, to_int_big_endian, to_int_little_endian, to_string, to_hex,
-  starts_with,
+  concat, drop, foldl, foldr, from_int_big_endian, from_int_little_endian,
+  from_string, index_of, is_empty, length, push, reduce, slice, starts_with,
+  take, test_bit, to_hex, to_int_big_endian, to_int_little_endian, to_string,
 }
 
 // --------------------------------------------------------- from_int_big_endian
